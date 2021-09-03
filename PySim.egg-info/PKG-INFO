@@ -1,0 +1,68 @@
+Metadata-Version: 2.1
+Name: PySim
+Version: 0.0.1
+Summary: Simple tool for data simulation
+Home-page: https://www.onera.fr
+Author: Benjamin Pannetier
+Author-email: benjamin.pannetier@onera.fr
+License: UNKNOWN
+Description: # pysim
+        Onera simulation project for target tracking 
+        
+        ### Requirements
+        
+        Install Anaconda distribution for python 3. For Windows user, add to your *PATH* the following:
+        
+        - C:/path/to/Anaconda3
+        - C:/path/to/Anaconda3/Lib
+        - C:/path/to/Anaconda3/Scripts
+        
+        
+        ### Installation
+        - Clone Git repository
+        - Open conda terminal and type the following commands to create pysim environment
+        
+        ```
+        conda create --name pysim python=3.6
+        activate pysim
+        ```
+        
+        - Install python dependencies (GDAL 2.2.2, PyQt5, mathplotlib, scypy, munkres, timer)
+        
+        ```
+        conda install gdal pyqt matplotlib scipy munkres scikit-learn
+        pip install timer
+        ```
+        
+        - Go to the simplekml folder (in the cloned repository) with the terminal and install it
+        
+        ```
+        python setup.py install
+        ```
+        
+        - Open *shield.py* and change the path at line 23
+        
+        - Copy in folder **pysim/data/carto** (create the folder, if it does not exist), the two following files
+        
+          - land_shallow_topo_2048.tif
+          - dnb_land_ocean_ice.2012.3600x1800_geo.tif
+        
+        ### Installation
+        
+        Go to the **pysim** folder and run:
+        
+        ```
+        python main.py
+        ```
+        
+        ### Known issues
+        
+        - If you encounter the error *"This application failed...Available platform plugins are: direct2d, minimal, offscrenn, windows"*, 
+        add to your *PATH* a new environment variable called QT_PLUGIN_PATH with the following value: c:/path/to/Anaconda3/Library/plugins
+        
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: ONERA License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

@@ -1,0 +1,18 @@
+__pycache__/*
+packages/__pycache__/*
+tool_tracking/__pycache__/*
+bugs/
+test
+patch/
+commit.sh
+.vscode
+MonteCarlo
+sandbox
+metrics/__pycache__/
+sextantlib/__pycache__/
+<<<<<<< HEAD
+data/
+**/__pycache__/
+*.pyc
+=======
+>>>>>>> b13f1b3171192f513aa51430f4187516a718b558

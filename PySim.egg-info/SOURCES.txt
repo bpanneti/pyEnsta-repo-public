@@ -1,0 +1,6 @@
+README.md
+setup.py
+PySim.egg-info/PKG-INFO
+PySim.egg-info/SOURCES.txt
+PySim.egg-info/dependency_links.txt
+PySim.egg-info/top_level.txt
