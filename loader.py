@@ -801,6 +801,8 @@ class data(QWidget):
         return
     def newComponents(self,date):
         
+        if self.conn==None:
+            return
         #==================#        
         # select nodes   #
         #==================# 

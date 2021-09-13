@@ -67,6 +67,10 @@ from metrics.gospa_ospa import Metrics
 
 from tool_tracking.estimator import TRACKER_TYPE
 
+
+
+from artlib.toolConvertDataBase import convertART
+
 TCP_PORT = 8080
 ADRESS_IP = '192.168.1.11'
 from sextantlib.sextant import Ui_Dialog as UI_Sextant
@@ -277,6 +281,11 @@ class mainwindow(QMainWindow):
         fileName = './data/base/tmp.db' 
         self.saver.saveData(fileName)
         
+        self.ART = convertART()
+        self.ART.message.connect(self.receiveMessage)
+        self.ART.referencePoint.connect(self.receiveReferencePoint)
+        self.ART.referenceTime.connect(self.receiveReferenceTime)
+            
         
     def closeTab(self,index):
         self.tabs.removeTab(index)
@@ -612,10 +621,7 @@ class mainwindow(QMainWindow):
                 flag = True
 
                 deb = mySensor.node.Orientation.yaw
-                
-                print(deb)
-                print(signe)
-                print(angle)
+         
                 
                 while angle < borne:
                     
@@ -823,6 +829,18 @@ class mainwindow(QMainWindow):
         actionComapreMOP.setIcon(icon)
         actionComapreMOP.triggered.connect(self.compareMOP);
         menuMetrics.addAction(actionComapreMOP)
+        #===========================
+        # Tools
+        #===========================
+        
+        menuMetrics = self.menuBar().addMenu("&Tools");
+        imageART = QPixmap("icones/art.png")
+        actionART= QAction(QIcon(imageMetrics), 'Convert ART database', self)
+        actionART.setToolTip('Click to convert ART database to pysim database!')
+        icon  = QIcon(imageART)
+        actionART.setIcon(icon)
+        actionART.triggered.connect(self.convertART_d);
+        menuMetrics.addAction(actionART)
         
         #===========================
         # tracking tools
@@ -902,7 +920,11 @@ class mainwindow(QMainWindow):
         self.sextantServer.close()
         self.workerThread.terminate()
  
+    def convertART_d(self):
         
+   
+         self.ART.show()
+ 
     def connectionSEXTANT(self):
             dockControls = QDockWidget("Controls");
             dockControls.setWindowIcon(QIcon('icones\connection.png'))

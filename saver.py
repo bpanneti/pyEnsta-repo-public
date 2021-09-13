@@ -394,6 +394,23 @@ class saveData(QWidget):
         except Error as e:
             self.message.emit(e)
         return None    
+     def saveReference(self,latitide,longitude,altitude,_time):
+         
+        Command = []
+        Command.append("insert into referencePoint_t ");
+        Command.append(" (date,longitude, latitude, altitude, type) values(");
+        Command.append(("'%s',")%( _time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+        Command.append(("%s,")%(longitude));
+        Command.append(("%s,")%(latitide ));
+        Command.append(("%s,")%(altitude ));
+        Command.append(("'WGS84'"));
+        Command.append(");");
+        Command = ''.join(Command)
+ 
+        self.executeRequest(self.conn,Command)
+
+        print('reference point saved')    
+         
      def saveReferencePoint(self):
         REFERENCE_TIME =_timer.getReferenceTime()  
 
@@ -699,7 +716,59 @@ class saveData(QWidget):
              Command = ''.join(Command)
          
              self.executeRequest(self.conn,Command)
-              
+     def saveAllTracks(self,_tracks = []): 
+   
+          
+             progress = QProgressDialog("save tracks...", "Abort save", 0, len(_tracks), self)
+             progress.setWindowModality(Qt.WindowModal) 
+             i = 0
+
+             for _track  in _tracks:
+                 progress.setValue(i)
+                 if progress.wasCanceled():
+                     break
+                 i+=1
+ 
+                  
+                 currentStates  = []
+                 _track.tree.getChilds(currentStates)
+                 _cState = currentStates[0]
+                 first = True
+                 while _cState != None:
+                     Command  = []
+                     self.saveStates(_cState.data,_track.id,_track.id_node)
+                     if first==True:
+                         Command.append("insert into track_t");
+                         Command.append(" (id_node,id_track, date_creation, date_end, last_states,  statut, classe, probability_classe) values(");
+                         Command.append(("'%s',")%(_track.id_node));
+                         Command.append( ("%s,")%(_track.id));
+                         Command.append( ("'%s',")%(_track.tree.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+                         Command.append( ("'%s',")%(_cState.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+                         Command.append( " '{");
+                         Command.append(("%s},")%( _cState.data.id ));
+                         Command.append("'CONFIRMED',");
+                         Command.append("'UNKNOWN',");
+                         Command.append("1.0");
+                         Command.append(");");
+                         first = False
+          
+                     else:
+                         Command.append("UPDATE track_t ");
+                         Command.append("SET  last_states=");
+                         Command.append( " '{");
+                         Command.append(("%s")%( _cState.data.id ))
+                         Command.append("}',");
+                         Command.append("date_end=");
+                         Command.append( ("'%s' ")%(_cState.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")))
+                         Command.append((" WHERE id_track = %s;")%(_track.id));
+                         
+                     _cState = _track.getState(_cState.data.idPere)
+                     
+                     Command = ''.join(Command)
+   
+                 self.executeRequest(self.conn,Command)
+             progress.setValue(len(_tracks))
+             self.conn.commit()              
      def saveTracks(self,_tracks = []): 
    
          _tracker = None
@@ -817,7 +886,100 @@ class saveData(QWidget):
              return
 
          biasCorrector.save(self.executeRequest, self.conn)
+     def saveAllNodes(self,_nodes=[]):
+         for _node in _nodes:
+            Command = []
+            Command.append("insert into  node_t "
+                      "(id_node,"
+                      "id_network, "
+                      "m_nom,"
+                      "type_node,"
+                      "ressource,"
+                      "color,"
+                      "date, "
+                      "id_sensors, "
+                      "latitude, "
+                      "longitude, "
+                      "altitude, "
+                      "yaw, "
+                      "pitch, "
+                      "roll, "
+                      "std_lat, "
+                      "std_long, "
+                      "cross_latlong, "
+                      "std_alt, "
+                      "std_yaw,"
+                      "std_pitch , "
+                      "std_roll, "
+                      " links,"
+                      "state)");
 
+  
+            Command.append(" values (" );
+            Command.append("'"+_node.id+"',");
+            Command.append("'none',");
+            Command.append("'"+_node.name+"',");
+            if type(_node) == MobileNode:
+                Command.append("'"+_node.typeNode.name+"',");
+            else:
+                Command.append("'"+_node.typeNode+"',");
+   
+            Command.append("'none',");
+            Command.append(("'{%d,%d,%d}',")%(_node.color.red(),_node.color.green(),_node.color.blue()));
+            Command.append(("'%s',")%(_node.date.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+            Command.append("'{");
+  
+            for _sensor in _node.sensors:
+                Command.append(("%s,")%(_sensor.id ));
+            if len(_node.sensors)>=1:
+        
+                Command = Command[:-1]
+            
+            if type(_node) == MobileNode :
+                flag, position,VelocityTime = _node.positionAtTime(_currentTime)
+                orientation     = _node.orientationAtTime(_currentTime)
+            
+            elif type(_node) == Node:
+                position        = _node.Position 
+                orientation     = _node.Orientation
+            
+            Command.append("}',");
+            Command.append(("{0},").format(position.latitude));
+            Command.append(("{0},").format(position.longitude));
+            Command.append(("{0},").format(position.altitude));
+
+            Command.append(("{0},").format(orientation.yaw));
+            Command.append(("{0},").format(orientation.pitch));
+            Command.append(("{0},").format(orientation.roll));
+
+            Command.append(("0,"))
+            Command.append(("0,"))
+            Command.append(("0,"))
+            Command.append(("0,"))
+
+            Command.append(("0,"))
+            Command.append(("0,"))
+            Command.append(("0,"))
+
+
+            Command.append("'{");
+            Command.append("}',");
+            Command.append(("'ALIVE'"));
+            Command.append(");");
+            Command = ''.join(Command)
+            self.executeRequest(self.conn,Command)
+         
+ 
+      
+                    
+            self.saveSensors(_node.sensors)
+ 
+            self.saveTrackers(_node.tracker)
+
+          
+
+            self.saveBiasCorretors(_node.biasCorrector)
+         
      def saveNodes(self,_currentTime = QDateTime()):
          REFERENCE_TIME = _timer.getReferenceTime()
          for _node in dataManager.instance().nodes():

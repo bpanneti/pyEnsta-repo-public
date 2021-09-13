@@ -161,7 +161,8 @@ class Node(object):
              
         self.Position           = Position()         # node location
         self.Orientation        = Orientation()      # node attitude
-
+        self.date               = QDateTime()        # node date
+        
         self.locObj             = None               # graphical node location object   
         self.textObj            = None               # graphical node text  object
         self.quiverObj          = None               # graphical node quiver  object
@@ -578,7 +579,7 @@ class Sensor(QWidget):
         #==============================
         
         self.internalTracker = False
-        
+     
         #===============================
         # Asservissement
         #===============================
@@ -743,7 +744,7 @@ class Sensor(QWidget):
         #cumulated reports
         self.checkBoxInternalTracker    = QCheckBox("Internal Tracker")
         self.checkBoxInternalTracker.clicked.connect(self.internatTracker)
-        if self.internatTracker:
+        if self.internalTracker:
             self.checkBoxInternalTracker.setCheckState(Qt.Checked)
         else:
             self.checkBoxInternalTracker.setCheckState(Qt.Unchecked)
@@ -756,7 +757,7 @@ class Sensor(QWidget):
         else:
             self.checkBox.setCheckState(Qt.Unchecked)
             
-        self.checkBox_cov    = QCheckBox('diaplay covariance')
+        self.checkBox_cov    = QCheckBox('display covariance')
         self.checkBox_cov.clicked.connect(self.displayCovarianceCheck)
         
         
@@ -1229,9 +1230,10 @@ class Sensor(QWidget):
 #                    Att.UTM2WGS84()
                     #print(['node location:',Att.x,Att.y])
         
-                    _angle =  np.pi/2 - self.orientationBiased.yaw *np.pi/180 - _cover.fov/2.0*np.pi/180;# np.pi/2  - 
+                   # _angle =  np.pi/2 - self.orientationBiased.yaw *np.pi/180 - _cover.fov/2.0*np.pi/180;# np.pi/2  - 
+                    _angle = np.mod(np.pi/2 - self.orientationBiased.yaw * np.pi/180  -  _cover.fov/2.0 * np.pi/180 + np.pi, 2*np.pi) - np.pi
                     verts = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])        
-                
+                  
                     while _angle  < np.pi/2  - self.orientationBiased.yaw*np.pi/180  + _cover.fov/2*np.pi/180:
                         _angle = _angle + 2*np.pi/180
                         Pt = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])
@@ -1880,9 +1882,11 @@ class Sensor(QWidget):
                 if self.internalTracker==False:
                     _scan.addPlot(PositionAtTime,_target.id,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
                 else:
-                    _scan.addTrack(PositionAtTime,_target.id,_idTrack,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
-            # else:
-            #     _idTrack
+                    _idTrack = self.targetTable[_target.id][0]
+                    _scan.addTrack(PositionAtTime,_target.id,self.targetTable[str(_target.id)] ,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
+            else:
+                  numTrack +=1
+                  self.targetTable[str(_target.id)] = numTrack 
         #=============================
         # génération des fausses alarmes
         #=============================   

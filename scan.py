@@ -62,6 +62,7 @@ class State(object):
         self.width          = 0 #largeur de l'ellipse d'incertitude
         self.height         = 0 #hauteur de l'ellipse d'incertitude
         self.angle          = 0 #orientation de l'ellipse d'incertitude dans le sens anti horaire en degré
+     
         
     def updateLocation(self,  _scan ):
 

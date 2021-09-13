@@ -71,6 +71,7 @@ class State(object):
         self.stateSavedInDb      = False
         self.filterType          = filterType
         self.idPlots             = []
+        self.addtionnalInfo      = []
 
         if dim == StateType.XY:
             if ftype == 0:
