@@ -122,9 +122,11 @@ class reader(QWidget):
             
               _track               = Track() 
               self.tracks.append(_track)
-              _track.id = int(row['DeviceTrackID'])
+              idTrack   = int(row['ScenarioTrackID'])
+              idDevice  = int(row['DeviceTrackID'])
+              _track.id = int(str(row['ScenarioTrackID'])+str(row['DeviceTrackID']))
               _track.id_node = '1'
-            
+              _track.addtionnalInfo.append(('idART',int(row['ScenarioTrackID'])))
         self.message.emit(('nombre de piste %s')%(len(self.tracks)))     
         progress = QProgressDialog("converting tracks...", "Abort conversion", 0, len(self.tracks), self)
         progress.setWindowModality(Qt.WindowModal)   
@@ -133,7 +135,7 @@ class reader(QWidget):
         for _track in self.tracks:
             self.conn.row_factory = sqlite3.Row
             cur = self.conn.cursor()
-            c = cur.execute(("SELECT  * FROM Track where DeviceTrackID=%s  ORDER BY  ScenarioTimeStamp;")%(_track.id))
+            c = cur.execute(("SELECT  * FROM Track where ScenarioTrackID =%s and DeviceTrackID=%s  ORDER BY  ScenarioTimeStamp;")%(idTrack,idDevice))
             data = c.fetchall() 
             idPere = -1
             i+=1
@@ -188,9 +190,9 @@ class reader(QWidget):
                 _state.updateCovariance()
                 
                 
-                _state.addtionnalInfo.append({'Power',float(row['Power'])})
-                _state.addtionnalInfo.append({'Clutter',float(row['Clutter'])})
-                _state.addtionnalInfo.append({'Doppler',float(row['Doppler'])})
+                _state.addtionnalInfo.append(('Power',float(row['Power'])))
+                _state.addtionnalInfo.append(('Clutter',float(row['Clutter'])))
+                _state.addtionnalInfo.append(('Doppler',float(row['Doppler'])))
                 if _state.idPere==-1  :
                     _track.tree.data = _state
                      
