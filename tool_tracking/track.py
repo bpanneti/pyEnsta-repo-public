@@ -50,7 +50,7 @@ class Track:
         self.trackerType = typeTracker
         self.id_node     = -1
         # objets graphiques
-
+        self.addtionnalInfo=[]
         self.locObj = []
         self.textObj = None
         self.quiverObj = None
