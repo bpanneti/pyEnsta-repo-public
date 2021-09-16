@@ -1353,7 +1353,21 @@ class data(QWidget):
             self.referenceTime.emit(date)
             self.conn.row_factory = False;
 
-
+            self.conn.row_factory = sqlite3.Row
+            cur = self.conn.cursor()
+            c = cur.execute("SELECT  date  FROM state_t ORDER BY date DESC LIMIT 1;")
+            data = c.fetchone()
+            if data:
+                dateEnd=QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
+          
+            self.conn.row_factory = sqlite3.Row
+            cur = self.conn.cursor()
+            c = cur.execute("SELECT  date  FROM plot_t ORDER BY date DESC LIMIT 1;")
+            data = c.fetchone()
+            if data :
+                dateEnd=QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
+            
+            self.endTime.emit(dateEnd)
     def newArray(self,filename):
 
         self.conn = sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
