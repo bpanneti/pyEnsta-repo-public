@@ -994,7 +994,7 @@ class MOP(QWidget):
             _localMop.setTrackerName(_tracker[1])
             self.windowMop[i].target_mops.append(_localMop)
             self.mopTargets[u][1].append(_localMop)
-            print('------> target')
+
             
         for t in range(0,len(_timeLine)-1):                
             
@@ -1222,6 +1222,7 @@ class MOP(QWidget):
      def receiveReferenceTime(self, date = QDateTime()):
          self.startDateTime.setDateTime(date)
          self.startDateTime.setEnabled(True)
+         
          self.endDateTime.setDateTime(date.addSecs(3600))
          self.endDateTime.setEnabled(True)
          
