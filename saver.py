@@ -343,7 +343,9 @@ class saveData(QWidget):
          Command.append(" last_states INTEGER  INTEGER[],");
          Command.append(" statut     VARCHAR, ");
          Command.append(" classe     VARCHAR,");
-         Command.append(" probability_classe VARCHAR");
+         Command.append(" probability_classe VARCHAR,");
+         Command.append(" additionalInfo_1 VARCHAR,");
+         Command.append(" additionalValue_1 REAL");
          Command.append(");");
          Command = ''.join(Command)
          self.executeRequest(self.conn,Command)
@@ -368,7 +370,13 @@ class saveData(QWidget):
          Command.append(" statut     VARCHAR, ");
          Command.append(" id_plots   VARCHAR,");
          Command.append(" classe     VARCHAR,");
-         Command.append(" probabilite_classe VARCHAR");
+         Command.append(" probabilite_classe VARCHAR,");
+         Command.append(" additionalInfo_1 VARCHAR,");
+         Command.append(" additionalValue_1 REAL,");
+         Command.append(" additionalInfo_2 VARCHAR,");
+         Command.append(" additionalValue_2 REAL,");
+         Command.append(" additionalInfo_3 VARCHAR,");
+         Command.append(" additionalValue_3 REAL");
          Command.append(");");
          Command = ''.join(Command)
          self.executeRequest(self.conn,Command)
@@ -670,7 +678,7 @@ class saveData(QWidget):
              _state.stateSavedInDb = True
              Command = []
              Command.append("insert into state_t ");
-             Command.append(" (id_state, id_track, id_parent, id_node, date, format, estimated_state, estimated_covariance,longitude,latitude,altitude , statut, id_plots, classe, probabilite_classe) values(");
+             Command.append(" (id_state, id_track, id_parent, id_node, date, format, estimated_state, estimated_covariance,longitude,latitude,altitude , statut, id_plots, classe, probabilite_classe,additionalInfo_1,additionalValue_1,additionalInfo_2,additionalValue_2,additionalInfo_3,additionalValue_3) values(");
              Command.append(("%s,")%(_state.id))
              Command.append(("%s,")%(_idTrack)) 
              Command.append(("%s,")%(_state.idPere)) 
@@ -711,11 +719,26 @@ class saveData(QWidget):
              for  i in range(len(_values)):
                     Command.append( ("%s,")%(_values[i]));
              Command = Command[:-1]
-             Command.append( "}'");
+             Command.append( "}',");
+             if len(_state.addtionnalInfo)  >=1:
+                  Command.append( ("'%s',%s,")%(_state.addtionnalInfo[0][0],_state.addtionnalInfo[0][1]));
+             else:
+                 Command.append( "' ', ,");
+             if len(_state.addtionnalInfo)  >=2:
+                  Command.append( ("'%s',%s,")%(_state.addtionnalInfo[1][0],_state.addtionnalInfo[1][1]));
+             else:
+                 Command.append( "' ', ,");
+             if len(_state.addtionnalInfo)  >=3:
+                  Command.append( ("'%s',%s")%(_state.addtionnalInfo[2][0],_state.addtionnalInfo[2][1]));
+             else:
+                 Command.append( "' ', ");
+                 
              Command.append(");");
              Command = ''.join(Command)
-         
+
+             
              self.executeRequest(self.conn,Command)
+        
      def saveAllTracks(self,_tracks = []): 
    
           
@@ -739,16 +762,22 @@ class saveData(QWidget):
                      self.saveStates(_cState.data,_track.id,_track.id_node)
                      if first==True:
                          Command.append("insert into track_t");
-                         Command.append(" (id_node,id_track, date_creation, date_end, last_states,  statut, classe, probability_classe) values(");
+                         Command.append(" (id_node,id_track, date_creation, date_end, last_states,  statut, classe, probability_classe,additionalInfo_1,additionalValue_1) values(");
                          Command.append(("'%s',")%(_track.id_node));
                          Command.append( ("%s,")%(_track.id));
                          Command.append( ("'%s',")%(_track.tree.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
                          Command.append( ("'%s',")%(_cState.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
                          Command.append( " '{");
-                         Command.append(("%s},")%( _cState.data.id ));
+                         Command.append(("%s}',")%( _cState.data.id ));
                          Command.append("'CONFIRMED',");
                          Command.append("'UNKNOWN',");
-                         Command.append("1.0");
+                         Command.append("1.0,");
+                         if len(_track.addtionnalInfo)  ==1:
+                             Command.append( ("'%s',%s")%(_track.addtionnalInfo[0][0],_track.addtionnalInfo[0][1]));
+                         else:
+                            Command.append( "' ', ");
+                            
+                         
                          Command.append(");");
                          first = False
           
@@ -765,8 +794,9 @@ class saveData(QWidget):
                      _cState = _track.getState(_cState.data.idPere)
                      
                      Command = ''.join(Command)
-   
-                 self.executeRequest(self.conn,Command)
+             
+                     self.executeRequest(self.conn,Command)
+                   
              progress.setValue(len(_tracks))
              self.conn.commit()              
      def saveTracks(self,_tracks = []): 
