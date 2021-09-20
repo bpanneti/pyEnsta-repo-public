@@ -384,7 +384,9 @@ class MOP(QWidget):
          self.textEdit                       = QTextEdit()
          self.comboBox                       = QComboBox()
          self.buttonGEARTH                   =  QPushButton('Export Kml')
-         
+         requestLabel                        = QLabel('track request (condition)') 
+         self.requestEdit                    = QLineEdit()
+          
          #current dataBase
          
          self.currentDataBase                = dataBase()
@@ -483,6 +485,10 @@ class MOP(QWidget):
          self.startDateTime.setEnabled(False)
          self.endDateTime.setEnabled(False)
 
+         layoutRequest              = QHBoxLayout()
+         layoutRequest.addWidget(requestLabel)
+         layoutRequest.addWidget(self.requestEdit)
+         layout.addLayout(layoutRequest)
          #♦display selected base
          layoutDisplay                     = QHBoxLayout()
          self.comboBox.addItem("no table")
@@ -1028,7 +1034,7 @@ class MOP(QWidget):
        
                 progress_Bar.update_progressbar(num)
                 num = num+1
-                tracks = self.currentDataBase.loadTracksFormDataBase(_file,idTracker)
+                tracks = self.currentDataBase.loadTracksFormDataBase(_file,idTracker,self.requestEdit.text())
                
                 self.receiveMessage(('---> compute mop from base %s')%(str(_file)) )             
           
@@ -1270,8 +1276,8 @@ class MOP(QWidget):
              
              _file = self.path.text()+str("/")+ self.comboBox.itemText(1)
              
-             self.currentDataBase.loadTracksFormDataBase(_file) 
-             tracks = self.currentDataBase.newTracks()
+             tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
+             #tracks = self.currentDataBase.newTracks()
              
              for _track in tracks:
                  if _track.taillePiste()>5:
@@ -1323,9 +1329,9 @@ class MOP(QWidget):
              
 
         #display tracks
-        self.currentDataBase.loadTracksFormDataBase(_file) 
+        tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
         
-        tracks = self.currentDataBase.newTracks()
+        #tracks = self.currentDataBase.newTracks()
         for _track in tracks:
            
             if _track.taillePiste()>5:

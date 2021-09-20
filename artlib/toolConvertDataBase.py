@@ -93,8 +93,8 @@ class reader(QWidget):
         c = cur.execute("SELECT  *  FROM DeviceContext WHERE ContextId=1 ORDER BY TimeStampBegin ASC LIMIT 1;")
         data= c.fetchone()  
   
-        self.longitude = float(data['Coordinate1'])
-        self.latitude  = float(data['Coordinate2'])
+        self.longitude = float(data['Coordinate2'])
+        self.latitude  = float(data['Coordinate1'])
         self.altitude  = float(data['Coordinate3'])
         stamp = int(data['TimeStampBegin'])
      
@@ -127,6 +127,7 @@ class reader(QWidget):
               _track.id = int(str(row['ScenarioTrackID'])+str(row['DeviceTrackID']))
               _track.id_node = '1'
               _track.addtionnalInfo.append(('idART',int(row['ScenarioTrackID'])))
+              _track.addtionnalInfo.append(('idARTDe',int(row['DeviceTrackID'])))
         self.message.emit(('nombre de piste %s')%(len(self.tracks)))     
         progress = QProgressDialog("converting tracks...", "Abort conversion", 0, len(self.tracks), self)
         progress.setWindowModality(Qt.WindowModal)   
@@ -134,6 +135,8 @@ class reader(QWidget):
         i = 0
         for _track in self.tracks:
             self.conn.row_factory = sqlite3.Row
+            idTrack   = _track.addtionnalInfo[0][1]
+            idDevice  = _track.addtionnalInfo[1][1]
             cur = self.conn.cursor()
             c = cur.execute(("SELECT  * FROM Track where ScenarioTrackID =%s and DeviceTrackID=%s  ORDER BY  ScenarioTimeStamp;")%(idTrack,idDevice))
             data = c.fetchall() 
@@ -174,10 +177,10 @@ class reader(QWidget):
         
            
              
-                ox,oy,oz           = enu_to_ecef(0.0,0.0,0.0,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude )
+                #ox,oy,oz           = enu_to_ecef(0.0,0.0,0.0,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude )
          
-                xLoc = ecef_to_enu3DVector(x,y,z,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
-                vLoc = ecef_to_enu3DVector(vx+ox,vy+oy,vz+oz,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                xLoc = [x,y,z]
+                vLoc = [vx,vy,vz]
                 #le vecteur state doit être en ENU
       
                 _state.state = np.array([xLoc[0],vLoc[0] ,xLoc[1],vLoc[1]  ,xLoc[2],vLoc[2] ])
@@ -185,7 +188,7 @@ class reader(QWidget):
       
                 P = np.eye(6)
    
-                _state.covariance = ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                _state.covariance = P;#ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
                 _state.updateLocation() 
                 _state.updateCovariance()
                 

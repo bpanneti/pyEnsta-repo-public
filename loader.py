@@ -644,7 +644,7 @@ class data(QWidget):
         self.conn.row_factory = sqlite3.Row
         cur = self.conn.cursor()
         c = cur.execute(("SELECT  * FROM node_t where date >='%s' and date<'%s';")%(date_begin.toString("yyyy-MM-dd HH:mm:ss.zzz"),date_end.toString("yyyy-MM-dd HH:mm:ss.zzz")))
-        print(("SELECT  * FROM node_t where date >='%s' and date<'%s';")%(date_begin.toString("yyyy-MM-dd HH:mm:ss.zzz"),date_end.toString("yyyy-MM-dd HH:mm:ss.zzz")))
+        #print(("SELECT  * FROM node_t where date >='%s' and date<'%s';")%(date_begin.toString("yyyy-MM-dd HH:mm:ss.zzz"),date_end.toString("yyyy-MM-dd HH:mm:ss.zzz")))
         data = c.fetchall()  
         sensor = None
         node  = None
@@ -1095,20 +1095,28 @@ class data(QWidget):
             conn.row_factory = False;  
             
             return nodes
-    def loadTracksFormDataBase(self,database,idTracker = None):
+    def loadTracksFormDataBase(self,database,idTracker = None,conditions=''):
          self.conn.close()
          self.conn = self.create_connection(database)
-         return self.newTracks(idTracker)
-    def newTracks(self,idTracker= None):
+         print(conditions)
+         return self.newTracks(idTracker,conditions)
+    def newTracks(self,idTracker= None,condition=''):
 
         #==================#        
         # select targets   #
         #==================# 
         self.conn.row_factory = sqlite3.Row
         cur = self.conn.cursor()
-        if idTracker!=None:
-            c = cur.execute("SELECT  *  FROM track_t where id_node == '%s'"%(idTracker)  )
+   
+ 
+        if idTracker!=None and condition!='':
+           
+            c = cur.execute("SELECT  *  FROM track_t where id_node == '%s' and %s"%(idTracker,condition)  )
+        elif  condition!='':
+            
+            c = cur.execute("SELECT  *  FROM track_t where %s"%(condition))
         else: 
+        
             c = cur.execute("SELECT  *  FROM track_t")
             
         data = c.fetchall()  

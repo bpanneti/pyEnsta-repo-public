@@ -723,19 +723,19 @@ class saveData(QWidget):
              if len(_state.addtionnalInfo)  >=1:
                   Command.append( ("'%s',%s,")%(_state.addtionnalInfo[0][0],_state.addtionnalInfo[0][1]));
              else:
-                 Command.append( "' ', ,");
+                 Command.append( "' ', '',");
              if len(_state.addtionnalInfo)  >=2:
                   Command.append( ("'%s',%s,")%(_state.addtionnalInfo[1][0],_state.addtionnalInfo[1][1]));
              else:
-                 Command.append( "' ', ,");
+                 Command.append( "' ','' ,");
              if len(_state.addtionnalInfo)  >=3:
                   Command.append( ("'%s',%s")%(_state.addtionnalInfo[2][0],_state.addtionnalInfo[2][1]));
              else:
-                 Command.append( "' ', ");
-                 
+                 Command.append( "' ','' ");
+                
              Command.append(");");
              Command = ''.join(Command)
-
+           
              
              self.executeRequest(self.conn,Command)
         
@@ -772,10 +772,10 @@ class saveData(QWidget):
                          Command.append("'CONFIRMED',");
                          Command.append("'UNKNOWN',");
                          Command.append("1.0,");
-                         if len(_track.addtionnalInfo)  ==1:
+                         if len(_track.addtionnalInfo)  >=1:
                              Command.append( ("'%s',%s")%(_track.addtionnalInfo[0][0],_track.addtionnalInfo[0][1]));
                          else:
-                            Command.append( "' ', ");
+                            Command.append( "' ', ''");
                             
                          
                          Command.append(");");
