@@ -16,7 +16,8 @@ from collections import namedtuple
 import pynmea2
 from datetime import datetime
 import sys
-
+import os
+from distutils.dir_util import copy_tree
 
 #=================
 # kml tool
@@ -29,18 +30,18 @@ TYPE  = namedtuple('TargetType', ['value', 'gabarit','icone','velocity'])
 class TARGET_TYPE(Enum):
  
     #TYPE , Gabarit in m (lxLxH), icon path, velocity min max in m/s
-    UNKNOWN = TYPE(0,  [-1,-1,-1], 'icones/unknown.png', [0,30])
-    PAX     = TYPE(1,  [0.5,0.8,1.8], 'icones/pax.png',     [0,8])
-    CAR     = TYPE(2 , [1.8,4.2,2.0], 'icones/car.png',     [0,20])
-    DRONE_FIXWING        = TYPE(3,  [0.3,0.3,0.2], 'icones/droneFIX.png',   [0,17])
-    DRONE_ROTARINGWING   = TYPE(4,  [0.3,0.3,0.2], 'icones/drone.png',   [0,17])
-    TANK    = TYPE(5,  [2.5,5.0,3.5], 'icones/tank.png',    [0,18])
-    TRUCK   = TYPE(6,  [2.3,12.0,3.5], 'icones/truck.png',   [0,20]) 
+    UNKNOWN = TYPE(0,  [-1,-1,-1], 'icones_target/unknown.png', [0,30])
+    PAX     = TYPE(1,  [0.5,0.8,1.8], 'icones_target/pax.png',     [0,8])
+    CAR     = TYPE(2 , [1.8,4.2,2.0], 'icones_target/car.png',     [0,20])
+    DRONE_FIXWING        = TYPE(3,  [0.3,0.3,0.2], 'icones_target/droneFIX.png',   [0,17])
+    DRONE_ROTARINGWING   = TYPE(4,  [0.3,0.3,0.2], 'icones_target/drone.png',   [0,17])
+    TANK    = TYPE(5,  [2.5,5.0,3.5], 'icones_target/tank.png',    [0,18])
+    TRUCK   = TYPE(6,  [2.3,12.0,3.5], 'icones_target/truck.png',   [0,20]) 
 def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
     file1 = open(_file, 'r') 
     Lines = file1.readlines()
     offset = -1
-
+    dateTimeOld = QDateTime()
     
     
     kml =  simplekml.Kml()         
@@ -50,10 +51,16 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
     count = 0;
     Cumul =[]
     MyType = TARGET_TYPE.UNKNOWN
+    
+    
+  
     for _type in TARGET_TYPE:
         if _type.name == TargetType:
             MyType = _type
     for _line in Lines:
+        
+ 
+            
         A = []
         flagOk = False
         MyDate = QDate
@@ -81,6 +88,42 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
              dateTime.setTimeSpec(Qt.UTC);
              dateTime = dateTime.toLocalTime();
              flagOk = True
+        if _file.endswith('.csv'):
+             msg = _line;#[::5]
+             
+             A = str.split(msg,';')
+             if A[0] =='drone':
+                 continue
+             #return 
+         
+            
+      
+             dateT           = A[1]
+             longitude       = float(A[3])
+             latitude        = float(A[2])  
+             altitude        = float(A[4])
+             
+                 
+             vitesse         = -1
+             
+             dateTime= QDateTime.fromString(dateT,"yyyyMMddhhmmss")
+             if dateTimeOld==dateTime:
+                 continue
+             dateTimeOld = dateTime;
+             dateTime = dateTime.addSecs(deltaTime)
+             dateTime.setTimeSpec(Qt.UTC)
+             dateTime = dateTime.toLocalTime();
+             flagOk = True
+             Cumul.append(( longitude, latitude, altitude))
+                    
+             pnt = folLoc.newpoint(name= Targetname, coords=[( longitude, latitude, altitude)])
+             pnt.timestamp.when     = dateTime.toString('yyyy-MM-ddTHH:mm:ss.z')
+             pnt.timestamp.begin    = dateTime.toString('yyyy-MM-ddTHH:mm:ss.z')
+             pnt.altitudemode       =  simplekml.AltitudeMode.relativetoground
+             pnt.style.iconstyle.scale = 3  # Icon thrice as big
+             pnt.style.iconstyle.icon.href =   MyType.value.icone
+             
+         
         if _file.endswith('.LLH'):
          #print(_line)
          msg = _line;#[::5]
@@ -133,10 +176,15 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
     lin.extrude = 1
     lin.style.linestyle.color = simplekml.Color.rgb(10,240,125,150)# = 'cafc03ff'  # Red
     lin.style.linestyle.width= 10  # 10 pixels
-                                        
-    print(output)
+    lin.style.polystyle.color = simplekml.Color.rgb(10,240,125,50)                                 
+    
     kml.save(output) 
-             
+    
+    #copie du repertoire icone dan sle répertoire kml 
+ 
+    copy_tree("../icones_target", os.path.dirname(os.path.abspath(output))+"/icones_target")
+    
+         
 def readSaveLLHFile(_file,_dataBase, Targetid, Targetname,TargetType,destroyGroundTrue,deltaTime=0):
     conn =   sqlite3.connect(_dataBase)
     count = 0;
@@ -177,10 +225,19 @@ def readSaveLLHFile(_file,_dataBase, Targetid, Targetname,TargetType,destroyGrou
     file1 = open(_file, 'r') 
     Lines = file1.readlines()
     offset = -1
+    dateTimeOld = QDateTime()
+    
+ 
+    
     for _line in Lines:
         A = []
         flagOk = False
         MyDate = QDate
+        
+ 
+           
+               
+
         if _file.endswith('.NMEA'):
             if _line.startswith("$GNRMC"):
                 A = str.split(_line,',')
@@ -207,6 +264,36 @@ def readSaveLLHFile(_file,_dataBase, Targetid, Targetname,TargetType,destroyGrou
              dateTime.setTimeSpec(Qt.UTC);
              dateTime = dateTime.toLocalTime();
              flagOk = True
+        if _file.endswith('.csv'):
+         msg = _line;#[::5]
+         
+         A = str.split(msg,';')
+         if A[0] =='drone':
+             continue
+         #return 
+     
+         
+         
+         
+  
+         dateT           = A[1]
+         longitude       = float(A[3])
+         latitude        = float(A[2])  
+         altitude        = float(A[4])
+         
+             
+         vitesse         = -1
+         
+         dateTime= QDateTime.fromString(dateT,"yyyyMMddhhmmss")
+         if dateTimeOld==dateTime:
+             continue
+         dateTimeOld = dateTime;
+         dateTime = dateTime.addSecs(deltaTime)
+         dateTime.setTimeSpec(Qt.UTC)
+         dateTime = dateTime.toLocalTime();
+         flagOk = True
+         
+            
         if _file.endswith('.LLH'):
          #print(_line)
          msg = _line;#[::5]
@@ -358,7 +445,7 @@ class Form(QWidget):
             readSaveKMLFile(self.LLHWidget.text(),output[0],_id,_name,_type,deltaTime)
    def getLLHFileName(self):
         fname = QFileDialog.getOpenFileName(self, 'select LLH or NMEA file', 
-         '',"file (*.LLH *.NMEA)")
+         '',"file (*.LLH *.NMEA *.csv)")
         if fname : 
             print(fname[0])
             self.LLHWidget.setText(fname[0])

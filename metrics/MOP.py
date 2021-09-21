@@ -30,6 +30,7 @@ import array as arr
 import numpy as np
 import os
 
+from distutils.dir_util import copy_tree
 from xml.dom import minidom
 
 from scipy.optimize import linear_sum_assignment
@@ -291,8 +292,20 @@ class MOPComparison(QWidget):
  
          # restore np.load for future normal usage
          np.load = np_load_old
+         
+         
+         #=====================#
+         # nettoyage
+         #=====================#
+     def nettoyage(self):
+        dataManager.instance().removeNodes()
+        dataManager.instance().removeTargets()
+ 
+        
+         
      def OnCancel(self):
          self.close()
+         self.nettoyage
      def EditPath_1(self):
             #self.clearAll()
             folder = QFileDialog.getExistingDirectory(None, "Select computed MOPs folder 1", '.')
@@ -593,7 +606,15 @@ class MOP(QWidget):
         else:
             event.ignore()
          
-          
+    
+        self.clearData()
+        self.startDateTime.clear()
+        self.endDateTime.clear()
+        self.path.clear()
+        self.textEdit.clear()
+        self.comboBox.clear()
+        
+        
      def newMap(self):         
      
          if self.axes!= None:
@@ -1246,11 +1267,42 @@ class MOP(QWidget):
              #display ground true
              kml =  simplekml.Kml()
              
+             folderSensor = kml.newfolder(name='sensors location')
+             
+             _file = self.path.text()+str("/")+ self.comboBox.itemText(1)
+               
+             tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
+             maxData = len(dataManager.instance().nodes())+len(dataManager.instance().targets())+len(tracks)
+             progress = QProgressDialog("converting sitac in kml...", "Abort conversion", 0, maxData, self)
+             progress.setWindowModality(Qt.WindowModal)   
+        
+             i = 0
+
+             for _node in  dataManager.instance().nodes():
+                 fol = folderSensor.newfolder(name=_node.name)
+                 folLoc = fol.newfolder(name='locations')
+                 pnt = folLoc.newpoint(name= _node.name, coords=[(_node.Position.longitude,_node.Position.latitude,_node.Position.altitude)])
+                 pnt.altitudemode       =  simplekml.AltitudeMode.relativetoground
+                 pnt.style.iconstyle.scale = 3  # Icon thrice as big
+                 pnt.style.iconstyle.icon.href =  './icones/radar.png'
+                                          
+                 i+=1
+                 progress.setValue(i)
+                 if progress.wasCanceled():
+                     break
+     
+                
+             
              folderTargets = kml.newfolder(name='targets')
              
              for _target in  dataManager.instance().targets():
                  fol = folderTargets.newfolder(name=_target.name)
                  folLoc = fol.newfolder(name='locations')
+                 i+=1
+                 progress.setValue(i)
+                 if progress.wasCanceled():
+                     break
+                 
                  Cumul =[]
                  for i in range(len(_target.trajectoryWayPoints)):
                      if self.startDateTime.dateTime() <= _target.timeToWayPoints[i] and _target.timeToWayPoints[i] <= self.endDateTime.dateTime() :
@@ -1271,36 +1323,62 @@ class MOP(QWidget):
                  lin.extrude = 1
                  lin.style.linestyle.color = simplekml.Color.rgb(10,240,125,150)# = 'cafc03ff'  # Red
                  lin.style.linestyle.width= 10  # 10 pixels
+                 lin.style.polystyle.color = simplekml.Color.rgb(10,240,125,150)
                     
              folderTracks = kml.newfolder(name='tracks')
              
-             _file = self.path.text()+str("/")+ self.comboBox.itemText(1)
+           
+            #=================================
+            # verrif
+            #==================================
+             _timeLine = []
              
-             tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
+             t = self.startDateTime.dateTime()
+             
+     
+            
+             while t < self.endDateTime.dateTime():
+             
+                _timeLine.append(t)
+                t = t.addSecs(1) 
+ 
              #tracks = self.currentDataBase.newTracks()
              
              for _track in tracks:
-                 if _track.taillePiste()>5:
+                 i+=1
+                 progress.setValue(i)
+                 if progress.wasCanceled():
+                     break
+                 
+                 if _track.taillePiste()>5    and _track.tree.data.time <= _timeLine[-1]  and _track.getCurrentState().data.time >=  _timeLine[0]: 
                     fol = folderTracks.newfolder(name=str(_track.id))
                     coordonnes = _track.getTrajectory()
                     lin = fol.newlinestring(name="track", description="trajectory of the track",
                         coords=coordonnes)
-                    lin.style.linestyle.color = 'ff0000ff'  # Red
-                    lin.style.linestyle.width= 10  # 10 pixels
+                    lin.altitudemode = simplekml.AltitudeMode.relativetoground
+                    lin.style.linestyle.color = simplekml.Color.rgb(230,40,125,150)#
+                    lin.style.linestyle.width= 5  # 10 pixels
+                    lin.style.polystyle.color = "7f00ff00"
+                    lin.extrude = 1
                     folState = fol.newfolder(name=str('estimated states'))
+     
+      
                     for _state in  _track.getStates() :
                             #if self.startDateTime.dateTime() <= _state.time and _state.time <= self.endDateTime.dateTime() :
                             
                                 #print([(_state.location.longitude,_state.location.latitude)])
-                                pnt = folState.newpoint(name= str(_state.id), coords=[(_state.location.longitude,_state.location.latitude)])
+                                pnt = folState.newpoint(name= str(_state.id), coords=[(_state.location.longitude,_state.location.latitude,_state.location.altitude)])
                                 pnt.timestamp.when     = _state.time.toString('yyyy-MM-ddTHH:mm:ss.z')
                                 pnt.style.iconstyle.scale = 3  # Icon thrice as big
-                                pnt.style.iconstyle.icon.href =  './icones/location.png'
+                                pnt.altitudemode       =  simplekml.AltitudeMode.relativetoground
+                                pnt.style.iconstyle.icon.href =  './icones_target/location.png'
                      
                     
                     
              kml.save(self.path.text()+'/battleplaces.kml') 
-   
+                 #copie du repertoire icone dan sle répertoire kml 
+             progress.setValue(maxData)
+             copy_tree('../icones_target', self.path.text()+'/icones_target')
      def displayDataBase(self,indexTable):
  
         indexTable = indexTable-1
@@ -1330,14 +1408,6 @@ class MOP(QWidget):
 
         #display tracks
         tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
-        
-        #tracks = self.currentDataBase.newTracks()
-        for _track in tracks:
-           
-            if _track.taillePiste()>5:
-             
-                _track.displayTrack(self.axes,self.canvas) 
-    
         #=================================
         # verrif
         #==================================
@@ -1352,6 +1422,14 @@ class MOP(QWidget):
  
             _timeLine.append(t)
             t = t.addSecs(1) 
+        #tracks = self.currentDataBase.newTracks()
+        for _track in tracks:
+           
+            if _track.taillePiste()>5:
+                if _track.tree.data.time <= _timeLine[-1]  and _track.getCurrentState().data.time >=  _timeLine[0]:
+                    _track.displayTrack(self.axes,self.canvas) 
+    
+
  
         #==================================
         # display plot

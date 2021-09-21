@@ -63,6 +63,8 @@ class DataManager:
         self._nodes  = [] #list of nodes
         self.biaisCorrectors = dict() #dictionary of bias correctors
         self._targets = []
+     
+        
 
     def addNodes(self, nodes):
         if nodes == [] or nodes == None:

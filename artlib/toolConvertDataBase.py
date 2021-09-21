@@ -163,11 +163,11 @@ class reader(QWidget):
                 
         
                 
-                x = - float(row['DeviceCoordinate1'])
+                x =   float(row['DeviceCoordinate1'])
                 y =   float(row['DeviceCoordinate2'])
                 z =   float(row['DeviceCoordinate3'])
                 
-                vx = - float(row['ScenarioVelocity1'])
+                vx =   float(row['ScenarioVelocity1'])
                 vy =   float(row['ScenarioVelocity2'])
                 vz =   float(row['ScenarioVelocity3'])
                 #latitude.append(float(row['latitude']) )
@@ -235,7 +235,7 @@ class reader(QWidget):
           stamp = int(row['TimeUpdated'])
           dt    =  QDateTime.fromMSecsSinceEpoch(stamp)
  
-          angle =  row['Double']
+          angle =  -row['Double']
   
           if count == 0:
               for _node in self.nodes:

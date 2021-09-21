@@ -419,7 +419,7 @@ class Track:
         current = c.parent 
         while current != None:
                 pos = current.data.location
-                coords.append((pos.longitude,pos.latitude))
+                coords.append((pos.longitude,pos.latitude,pos.altitude))
 
                 current = current.parent 
      
