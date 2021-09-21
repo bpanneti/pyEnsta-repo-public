@@ -20,7 +20,7 @@ import numpy as np
 import io
 from Managers.dataManager import DataManager as dataManager
 from sensor import Node, Sensor,SensorCoverage, FOVType, SensorBias
-from scan import Plot,PLOTType, Scan
+from scan import Plot,PLOTType, Scan, State as plotState
 from target  import Target,TARGET_TYPE, RECORDED_TYPE
 
 from tool_tracking.tracker import Tracker
@@ -59,6 +59,7 @@ class selectData(QWidget):
     emitSensors     = pyqtSignal(list)
     emitParameters  = pyqtSignal(list)
     emitDetections  = pyqtSignal(list)
+    emitStates      = pyqtSignal(list)
     
     def __init__(self, parent=None):
         super(selectData, self).__init__()
@@ -235,7 +236,83 @@ class selectData(QWidget):
                 self.emitDetections.emit(detections)
     
             
+            #==================#        
+            # select states    #
+            #==================#
+         
+                self.conn.row_factory = sqlite3.Row
+                cur = self.conn.cursor()
+                #4print(("SELECT  * FROM plot_t where date<='%s' and date>'%s';"%(self.date.toString("yyyy-MM-dd HH:mm:ss.z"),self.previousDate.toString("yyyy-MM-dd HH:mm:ss.z"))))
+                c = cur.execute(("SELECT  * FROM state_t where date<='%s' and date>'%s';"%(self.date.toString("yyyy-MM-dd HH:mm:ss.zzz"),self.previousDate.toString("yyyy-MM-dd HH:mm:ss.zzz"))))
+                data = c.fetchall()  
+          
+                states = []
+                container = [] 
+                for row in data :
+ 
+                    if int(row['id_state']) in container :
+                        continue
+                 
+                    container.append(int(row['id_state']))
+                    _state          = State()
+                    _state.id       = int(row['id_state']) 
+                    _state.idPere   = int(row['id_parent']) 
+                    _state.time     = QDateTime.fromString(row['date'],"yyyy-MM-dd HH:mm:ss.zzz")
+                    _classe = TARGET_TYPE.UNKNOWN
+                
+                    for type_t in TARGET_TYPE:
+                        if type_t.value.correspondance == row['classe'] :
+                             _classe  = type_t
+                             break
+                          
+                    _state.classe   = _classe
+                    
+                    _str            = str(row['estimated_state']) 
+      
+                    _str =_str.replace('{','');
+                    _str =_str.replace('}','');
+                    x = _str.split(',');
+                    x = np.array(x)
+                    x = x.astype(np.float)
             
+                    ox,oy,oz           = enu_to_ecef(0.0,0.0,0.0,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude )
+             
+                    xLoc = ecef_to_enu3DVector(x[0],x[2],x[4],REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                    vLoc = ecef_to_enu3DVector(x[1]+ox,x[3]+oy,x[5]+oz,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                    #le vecteur state doit être en ENU
+                    
+                    _state.state = np.array([xLoc[0],vLoc[0] ,xLoc[1],vLoc[1]  ,xLoc[2],vLoc[2] ])
+              
+                    _state.mode = StateType.XYZ
+                    _str =  str(row['estimated_covariance']) 
+                    _str2 = _str.split('},');
+                    P = np.zeros([6,6])
+                    for i,t in zip(range(0,6),_str2):
+                        t =t.replace('{','');
+                        t =t.replace('}','');  
+                        x = t.split(',');
+                        x= np.array(x)
+                        x= x.astype(np.float)
+                        P[i,:] = x
+                    
+                    _state.covariance = ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                    _state.updateLocation() 
+                    _state.updateCovariance()
+                
+                
+           
+                    _plots = [] 
+                    _str =  str(row['id_plots']) 
+                    _str =_str.replace('{','');
+                    _str =_str.replace('}','');
+                    _strPlots = _str.split(',');
+                    for i,t in zip(range(0,len(_strPlots)),_strPlots):
+                        _plots.append(_strPlots[i])
+                  
+                    states.append(_state)
+                          
+                #même vide on emet
+                self.emitStates.emit(states)         
             
             
     def connection(self,conn):
@@ -257,7 +334,7 @@ class data(QWidget):
     emitTargets             = pyqtSignal()
     emitTrackers            = pyqtSignal(list)
     emitBiasCorrectors      = pyqtSignal()
-    
+    emitStates              = pyqtSignal(list)
     def __init__(self, parent=None):
     
         super(data, self).__init__()
@@ -276,11 +353,14 @@ class data(QWidget):
         self.selectData.emitSensors.connect(self.receiveSensors)
         self.selectData.emitParameters.connect(self.receiveParameters)
         self.selectData.emitDetections.connect(self.receiveDetections)
+        self.selectData.emitStates.connect(self.receiveStates)
         #self.selectData.moveToThread(self.thread)
         #self.thread.started.connect(self.selectData.run)
         self.Pause = False
         self.Polygon = QPolygon()
+    def receiveStates(self,_states):
         
+        self.emitStates.emit(_states)
     def receiveDetections(self, _detections):
         #print("---> receiveDetections ")
         flag = False
@@ -397,7 +477,13 @@ class data(QWidget):
          if data:
           _sensor.realData = True;
              
-     
+         cur = self.conn.cursor()
+      
+         c = cur.execute("SELECT COUNT(*) FROM state_t;")
+         data = c.fetchone()  
+       
+         if data:
+          _sensor.realData = True;
     def receiveSensors(self,sensors):
         for _sensor in  sensors:  
  
@@ -890,6 +976,15 @@ class data(QWidget):
                 
                 _sensor.realData = True;
         
+        self.conn.row_factory = sqlite3.Row    
+        cur = self.conn.cursor()
+        c = cur.execute("SELECT  * FROM state_t ;") 
+        data = c.fetchall()  
+        if data:
+            for _sensor in sensors:
+                
+                _sensor.realData = True;
+          
         
         #==================#        
         # select parameters#

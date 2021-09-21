@@ -35,6 +35,7 @@ class GISMode(Enum):
     updateNode      = 8
     updatePlot      = 9
     updateBiasCorrector = 10
+    updateState     = 11
 
 
  
@@ -89,6 +90,8 @@ class GIS(QWidget):
         
             self.plotsObj = []
             
+            self.statesObj =[]
+            
             self.rect = None #(Area of interest)
     
             self.tree.itemClicked.connect(self.onClickItem)
@@ -134,6 +137,10 @@ class GIS(QWidget):
             
             self.detections = []
             
+            #List des states
+            
+            self.states = []
+            
             #gaussian widget
             
             self.GaussianWidget = None
@@ -143,11 +150,18 @@ class GIS(QWidget):
             self.biaisCorrectors = dict()
 
             self.biasTreeInterface = BiasTreeInterface(self.biaisCorrectors, self.tree, self.message)
-
+        def  removeStates(self):
+             if self.statesObj!=[]:
+                self.axes.lines.remove(self.statesObj)
+             self.statesObj = []           
         def removeDetections(self):
             if self.plotsObj!=[]:
                 self.axes.lines.remove(self.plotsObj)
             self.plotsObj = []
+        def receiveStates(self,_states):
+            self.states =  self.states + _states
+            self.mode = GISMode.updateState
+            self.run()
             
         def receiveDetections(self,_detections):
             #self.mutex.lock()
@@ -156,6 +170,32 @@ class GIS(QWidget):
        
             self.mode = GISMode.updatePlot
             self.run()
+        def drawStates(self):
+            self.removeStates()
+      
+            x = []
+            y = []
+   
+            for _det in self.states:
+   
+                   x.append(_det.location.longitude)
+                   y.append(_det.location.latitude)
+               #box_coords = list(zip(x, y))
+
+            couleur = QColor(Qt.darkBlue)
+            #plotsObj, = self.axes.scatter(box_coords, marker='o', c='r', edgecolor='b')
+            #plotsObj,  = self.axes.plot(self.Position[0].longitude + distance *np.cos(an),self.Position[0].latitude + distance *np.sin(an) ,color=couleur.name()) 
+            #self.axes.plot(box_coords,color=couleur.name())
+            if x!=[] and y !=[]:
+
+                self.statesObj,  =  self.axes.plot(x,y, marker='o', color=couleur.name(), ls='')
+                self.axes.draw_artist(self.statesObj )
+                
+                self.canvas.blit(self.axes.bbox)
+                self.canvas.update()
+                self.canvas.flush_events()
+                #self.plotsObj = plotsObj
+            self.states.clear()   
         def drawDetections(self):
       
             self.removeDetections()
@@ -583,6 +623,8 @@ class GIS(QWidget):
                         _node.toDisplay(self.axes,self.canvas)
             if self.mode == GISMode.updatePlot:
                     self.drawDetections();
+            if self.mode == GISMode.updateState:
+                    self.drawStates();
             if self.mode == GISMode.updateSensor:
                     for _sensor in self.manager.sensors():
                         _sensor.toDisplay(self.axes,self.canvas)

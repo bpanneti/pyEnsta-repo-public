@@ -55,13 +55,13 @@ class RECORDED_TYPE(Enum):
 class TARGET_TYPE(Enum):
  
     #TYPE , Gabarit in m (lxLxH), icon path, velocity min max in m/s
-    UNKNOWN = TYPE(0,  [-1,-1,-1]    , 'icones/unknown.png',    [0,30],     'UNKNOWN')
-    PAX     = TYPE(1,  [0.5,0.8,1.8] , 'icones/pax.png'    ,    [0,8 ],     'PAX')
-    CAR     = TYPE(2,  [1.8,4.2,2.0] , 'icones/car.png'    ,    [0,30],     'VEHICLE_LIGHT')
-    DRONE   = TYPE(3,  [0.3,0.3,0.2] , 'icones/drone.png'  ,    [0,17],     'SUAV')
-    TANK    = TYPE(4,  [2.5,5.0,3.5] , 'icones/tank.png'   ,    [0,18],     'ARMORED_VEHICLE')
-    TRUCK   = TYPE(5,  [2.3,12.0,3.5], 'icones/truck.png'  ,    [0,20],     'truck')
-    BIRD    = TYPE(6,  [0.7,0.7,0.4] , 'icones/bird.png'   ,    [0,8 ],     'UNKNOWN')
+    UNKNOWN = TYPE(0,  [-1,-1,-1]    , 'icones_target/unknown.png',    [0,30],     'UNKNOWN')
+    PAX     = TYPE(1,  [0.5,0.8,1.8] , 'icones_target/pax.png'    ,    [0,8 ],     'PAX')
+    CAR     = TYPE(2,  [1.8,4.2,2.0] , 'icones_target/car.png'    ,    [0,30],     'VEHICLE_LIGHT')
+    DRONE   = TYPE(3,  [0.3,0.3,0.2] , 'icones_target/drone.png'  ,    [0,17],     'SUAV')
+    TANK    = TYPE(4,  [2.5,5.0,3.5] , 'icones_target/tank.png'   ,    [0,18],     'ARMORED_VEHICLE')
+    TRUCK   = TYPE(5,  [2.3,12.0,3.5], 'icones_target/truck.png'  ,    [0,20],     'truck')
+    BIRD    = TYPE(6,  [0.7,0.7,0.4] , 'icones_target/bird.png'   ,    [0,8 ],     'UNKNOWN')
 
  
         

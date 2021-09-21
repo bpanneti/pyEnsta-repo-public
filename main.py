@@ -238,6 +238,7 @@ class mainwindow(QMainWindow):
         self.loader.message.connect(self.receiveMessage)
         self.loader.referencePoint.connect(self.receiveReferencePoint)
         self.loader.referenceTime.connect(self.receiveReferenceTime)
+        self.loader.endTime.connect(self.receiveEndTime)
         self.loader.emitNodes.connect(self.receiveNode)
         self.loader.emitBiasCorrectors.connect(self.receiveBiasCorrectors)
         self.loader.emitSensors.connect(self.receiveSensors)
@@ -246,7 +247,7 @@ class mainwindow(QMainWindow):
         self.loader.emitTargets.connect(self.receiveTargets)
         self.loader.emitTrackers.connect(self.receiveTrackers)
         self.loader.emitSelectedDetections.connect(self.receiveSelectedDetections)
-        
+        self.loader.emitStates.connect(self.receiveStates)
  
         #----------- MOP
         
@@ -557,7 +558,11 @@ class mainwindow(QMainWindow):
     def receiveSelectedDetections(self,_detections):
         #print('receive selected dets in setup')
         self.tablePlots.receiveDetections(_detections)
-        
+    
+    def receiveStates(self,_states):
+        if _states!=[]:
+           print("data reçues")
+           self.GIS.receiveStates(_states)
     def receiveDetections(self,_detections):
         if _detections != []:
             self.GIS.receiveDetections(_detections)
@@ -668,7 +673,9 @@ class mainwindow(QMainWindow):
                     _point.WGS842UTM()
                     
                     _point.WGS842ENU()
-                    
+    def receiveEndTime (self, date = QDateTime()):
+            self.timer.newEndTime(date)     
+            self.receiveMessage(("new endTime %s")%(date.toString("dd-MM-yyyy HH:mm:ss.z")))
     def receiveReferenceTime(self, date = QDateTime()):
             self.timer.newReferenceTime(date)
             self.receiveMessage(("new referenceTime %s")%(date.toString("dd-MM-yyyy HH:mm:ss.z")))

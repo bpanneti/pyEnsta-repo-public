@@ -275,6 +275,9 @@ class Sequenceur(QWidget):
  
         self.displaySituation()
     
+    def newEndTime(self,date = QDateTime()):
+        
+        self.timeEnd.setDateTime(date)
         
     def newReferenceTime(self,ref = QDateTime()):
         global REFERENCE_TIME
