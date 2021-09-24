@@ -1271,28 +1271,92 @@ class MOP(QWidget):
              
              _file = self.path.text()+str("/")+ self.comboBox.itemText(1)
                
+            
+             self.currentDataBase.updateComponents(QDateTime(),self.endDateTime.dateTime())
              tracks =self.currentDataBase.loadTracksFormDataBase(_file,None,self.requestEdit.text()) 
              maxData = len(dataManager.instance().nodes())+len(dataManager.instance().targets())+len(tracks)
              progress = QProgressDialog("converting sitac in kml...", "Abort conversion", 0, maxData, self)
              progress.setWindowModality(Qt.WindowModal)   
         
              i = 0
-
+             center = []
              for _node in  dataManager.instance().nodes():
                  fol = folderSensor.newfolder(name=_node.name)
                  folLoc = fol.newfolder(name='locations')
                  pnt = folLoc.newpoint(name= _node.name, coords=[(_node.Position.longitude,_node.Position.latitude,_node.Position.altitude)])
                  pnt.altitudemode       =  simplekml.AltitudeMode.relativetoground
                  pnt.style.iconstyle.scale = 3  # Icon thrice as big
-                 pnt.style.iconstyle.icon.href =  './icones/radar.png'
-                                          
+                 pnt.style.iconstyle.icon.href =  './icones_target/radar.png'
+                 center=[_node.Position.longitude,_node.Position.latitude,_node.Position.altitude]                         
                  i+=1
+                 
+                 
+                 
+                 for _sensor in  _node.sensors:
+                     print('--->')
+                     if _sensor.sensorCoverage!=None  and  REFERENCE_POINT.longitude !=[]  and  REFERENCE_POINT.latitude!=[]:
+                        print('--->')
+                        folAreas = fol.newfolder(name='fields of view')
+                        for _cover in _sensor.sensorCoverage: 
+                                print('---> 2')
+                                pol = folAreas.newpolygon(name='field of View '+str(_cover.name))
+                                dmax = _cover.distanceMax
+                                
+                                pts =  Position()
+                                pts.setXYZ(_node.Position.x_UTM + dmax,_node.Position.y_UTM,0.0)
+                              
+                                _angle = np.mod(np.pi/2 - _node.Orientation.yaw * np.pi/180  -  _cover.fov/2.0 * np.pi/180 + np.pi, 2*np.pi) - np.pi
+                                _angle = _angle +180.0
+                                verts = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])        
+                               
+                                while _angle  < np.pi/2  - _node.Orientation.yaw*np.pi/180  + _cover.fov/2*np.pi/180:
+                                    _angle = _angle + 2*np.pi/180
+                                    Pt = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])
+                                    verts = np.vstack([verts, Pt] )
+                         
+                                while _angle  > np.pi/2  - _node.Orientation.yaw*np.pi/180  - _cover.fov/2*np.pi/180:
+                                    _angle = _angle - 2*np.pi/180
+                                    Pt = np.array([_cover.distanceMax*np.cos(_angle), _cover.distanceMax*np.sin(_angle)])
+                                    verts = np.vstack([verts, Pt] )
+                        
+                                Pt = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])       
+                                verts = np.vstack([verts, Pt] )    +[_node.Position.x_UTM,_node.Position.y_UTM]
+                            
+                                tot=[]
+                                for u in verts:
+                                    pts =  Position()
+                                    pts.setXYZ(u[0],u[1],0.0)
+                                    tot.append((pts.longitude ,pts.latitude))
+                                
+                                pol.outerboundaryis = tot
+                                pol.style.linestyle.color = simplekml.Color.green
+                                pol.style.linestyle.width = 5
+                                pol.style.polystyle.color = simplekml.Color.changealphaint(50, simplekml.Color.green)
+                     
+                                break
                  progress.setValue(i)
                  if progress.wasCanceled():
                      break
-     
-                
-             
+                 
+                    
+             #=================================
+             # grid
+             #==================================     
+             if center !=():
+                 multilin = kml.newmultigeometry(name="Grid") # SA (Hartebeeshoek94) Grid 
+         
+                 for x in np.arange(-0.1,0.1,0.005):
+                     linecoords = []
+                     for y in np.arange(-0.1, 0.1,0.005):
+                         linecoords.append((center[0] + x,center[1] + y))
+                        
+                         multilin.newlinestring(coords=linecoords)
+                 for y in np.arange(-0.1,0.1,0.005):
+                     linecoords = []
+                     for x in np.arange(-0.1, 0.1,0.005):
+                         linecoords.append((center[0] + x,center[1] + y))
+                        
+                         multilin.newlinestring(coords=linecoords)      
              folderTargets = kml.newfolder(name='targets')
              
              for _target in  dataManager.instance().targets():
@@ -1326,8 +1390,8 @@ class MOP(QWidget):
                  lin.style.polystyle.color = simplekml.Color.rgb(10,240,125,150)
                     
              folderTracks = kml.newfolder(name='tracks')
-             
-           
+
+            
             #=================================
             # verrif
             #==================================
@@ -1378,7 +1442,9 @@ class MOP(QWidget):
              kml.save(self.path.text()+'/battleplaces.kml') 
                  #copie du repertoire icone dan sle répertoire kml 
              progress.setValue(maxData)
-             copy_tree('../icones_target', self.path.text()+'/icones_target')
+             s = os.path.join(os.getcwd(), 'icones_target')
+             d = os.path.join(self.path.text(), 'icones_target')
+             copy_tree(s,d)
      def displayDataBase(self,indexTable):
  
         indexTable = indexTable-1

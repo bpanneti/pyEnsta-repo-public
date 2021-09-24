@@ -115,7 +115,7 @@ class reader(QWidget):
     def selectTrack(self):
         self.conn.row_factory = sqlite3.Row
         cur = self.conn.cursor()
-        c = cur.execute("SELECT  DISTINCT DeviceTrackID, ScenarioTrackID FROM Track where ActiveTime > 100  ;")
+        c = cur.execute("SELECT  DISTINCT DeviceTrackID, ScenarioTrackID FROM Track where ActiveTime > 70  ;")
         data = c.fetchall() 
        
         for row in data :
@@ -284,7 +284,7 @@ class reader(QWidget):
             
         coverage.fov            = 90
         coverage.distanceMin    = 0
-        coverage.distanceMax    = 4
+        coverage.distanceMax    = 4000
         coverage.fov_elevation  = 30 
         coverage.id_Sensor      = sensor.id
     
