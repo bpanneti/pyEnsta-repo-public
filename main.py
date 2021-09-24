@@ -563,6 +563,7 @@ class mainwindow(QMainWindow):
         if _states!=[]:
            print("data reçues")
            self.GIS.receiveStates(_states)
+           self.sextantServer.receiveStates(_states)
     def receiveDetections(self,_detections):
         if _detections != []:
             self.GIS.receiveDetections(_detections)

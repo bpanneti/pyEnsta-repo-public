@@ -32,7 +32,8 @@ class PLOTType(Enum):
     ANGULAR_TRACK   = 9
     ANGULAR2D_TRACK = 10
     SPHERICAL_TRACK = 11
-    POLAR_TRACK     = 12
+    CARTESIAN_TRACK = 13
+    POLAR_TRACK     = 14
 
 class State(object):
     def __init__(self,idScan = 0, rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
@@ -693,6 +694,7 @@ class Scan(object):
             json+= '{'+\
 		           '"plotId":'+ str(det.id)+','+\
 		           '"position_available": 0,'
+                   
             if self.plotType == PLOTType.ANGULAR:
                 
                 json+=  '"plotType": "BEARING_1D",'+\
@@ -724,8 +726,7 @@ class Scan(object):
 		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
 		                  '"classification": "UNKNOWN",'+\
 		                  '"probaClassification": "1.0"},'
-                
-                        
+
             elif self.plotType == PLOTType.ANGULAR2D:
                 #print(-self.elevation + det.phi*180/np.pi)
                 json+=  '"plotType": "BEARING_2D",'+\

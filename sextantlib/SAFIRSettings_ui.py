@@ -124,7 +124,26 @@ class server(QObject):
          
         if json!='':
             self.sendJsonMessage(json)
+    def receiveStates(self,_stats=[]):
+        if _stats ==[]:
+            return
+        
+        body = str("")
+        body = '<HTTP_JSON>'
+        body  += '{'+\
+            '"code": 11,'+\
+            '"tracks": ['
+        for states in _stats:
             
+            body += states.toJson()+','
+            
+        body = body[:-1]
+        body +='],'+\
+        '"scanTime": "'+_stats[0].time.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"'+\
+        '}'
+        body+='</HTTP_JSON>'
+        
+        self.send(body);
     def receiveSensors(self):
         body = str("")
         if self.onlyJson == True:

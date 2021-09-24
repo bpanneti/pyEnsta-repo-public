@@ -120,6 +120,31 @@ class State(object):
 
     def __str__(self):
         return 'state n°' + str(self.id)
+    def toJson(self,numberofTracks=0):
+         state = self.getStateECEF()
+         cov = self.getCovarianceECEF()
+         jsonCov = ''
+         for i in range(3):
+           for j in range(3): 
+             jsonCov+= str(cov[i][j])+','
+         jsonCov = jsonCov[:-1]          
+         jsonClassif = ''
+         for i in range(len(self.classeProbabilities)):
+             jsonClassif  += str(float(self.classeProbabilities[i]))+',' 
+         jsonClassif = jsonClassif[:-1]
+         json='{'+\
+		           '"trackId":'+ str(self.id)+','+\
+                   '"hsotility": "UNKNOWN",'+\
+                   '"state": "CONFIRMED",'+\
+                   '"format":"ECEF",'+\
+                   '"position": "{'+str(float(state[0]))+','+str(float(state[2]))+','+str(float(state[4]))+'}",'+\
+                   '"velocity": "{'+str(float(state[1]))+','+str(float(state[3]))+','+str(float(state[5]))+'}",'+\
+                   '"date": "'+self.time.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+                   '"associatedPLots": [],'+\
+                   '"trackClassification":"{'+jsonClassif+'}",'+\
+                   '"precision":"{'+jsonCov+'}"'+\
+                   '}'
+         return json;
     def computeMixingProbabilities(self):
  
         self.cbar =  self.P_transition@self.Mu    

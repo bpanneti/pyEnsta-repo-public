@@ -1193,7 +1193,6 @@ class data(QWidget):
     def loadTracksFormDataBase(self,database,idTracker = None,conditions=''):
          self.conn.close()
          self.conn = self.create_connection(database)
-         print(conditions)
          return self.newTracks(idTracker,conditions)
     def newTracks(self,idTracker= None,condition=''):
 
