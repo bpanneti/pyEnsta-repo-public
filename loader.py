@@ -256,6 +256,7 @@ class selectData(QWidget):
                     container.append(int(row['id_state']))
                     _state          = State()
                     _state.id       = int(row['id_state']) 
+                    _state.idTrack  = int(row['id_track']) 
                     _state.idPere   = int(row['id_parent']) 
                     _state.time     = QDateTime.fromString(row['date'],"yyyy-MM-dd HH:mm:ss.zzz")
                     _classe = TARGET_TYPE.UNKNOWN

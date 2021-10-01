@@ -44,10 +44,12 @@ class State(object):
     __cnt = count(0)
     def __init__(self, time = QDateTime(), plot = Plot(), dim = StateType.UNKNOWN, cov = 0, state = 0, extent=0, ftype = 0, filters=[], filterType = TRACKER_TYPE.UNKNOWN, estimatorInfos=[]):
         self.id                  = next(self.__cnt)
+        self.idTrack             = -1
         self.idPere              = -1
         self.startedTime         = time
         self.time                = time
         self.mode                = dim
+        self.idNode              = '127.0.0.1'
         self.periode             = 0
         self.classe              = TARGET_TYPE.UNKNOWN
         self.classeProbabilities = np.zeros((1, 1))
@@ -120,12 +122,12 @@ class State(object):
 
     def __str__(self):
         return 'state n°' + str(self.id)
-    def toJson(self,numberofTracks=0):
+    def toJson(self,rank=0,numberofTracks=0):
          state = self.getStateECEF()
          cov = self.getCovarianceECEF()
          jsonCov = ''
-         for i in range(3):
-           for j in range(3): 
+         for i in range(6):
+           for j in range(6): 
              jsonCov+= str(cov[i][j])+','
          jsonCov = jsonCov[:-1]          
          jsonClassif = ''
@@ -133,17 +135,22 @@ class State(object):
              jsonClassif  += str(float(self.classeProbabilities[i]))+',' 
          jsonClassif = jsonClassif[:-1]
          json='{'+\
-		           '"trackId":'+ str(self.id)+','+\
+		           '"trackNumber":'+ str(self.idTrack)+','+\
+                   '"trackInScan":"'+ str(rank)+'/'+str(numberofTracks)+'",'+\
                    '"hsotility": "UNKNOWN",'+\
                    '"state": "CONFIRMED",'+\
-                   '"format":"ECEF",'+\
-                   '"position": "{'+str(float(state[0]))+','+str(float(state[2]))+','+str(float(state[4]))+'}",'+\
-                   '"velocity": "{'+str(float(state[1]))+','+str(float(state[3]))+','+str(float(state[5]))+'}",'+\
+                   '"node":"' + str(self.idNode) + '",' +\
+                   '"position": {'+'"format":"ECEF","x":'+str(float(state[0]))+',"y":'+str(float(state[2]))+',"z":'+str(float(state[4]))+'},'+\
+                   '"velocity": {'+'"format":"ECEF","x":'+str(float(state[1]))+',"y":'+str(float(state[3]))+',"z":'+str(float(state[5]))+'},'+\
                    '"date": "'+self.time.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
                    '"associatedPLots": [],'+\
                    '"trackClassification":"{'+jsonClassif+'}",'+\
-                   '"precision":"{'+jsonCov+'}"'+\
-                   '}'
+                   '"precision":{'+'"format":"ECEF","col":6,"row":6,"components":"xvxyvyzvz","covariance":"'+jsonCov+'"},'+\
+                   '"additionalInfo":['
+         for inf in self.addtionnalInfo:
+             json+='{"'+str(inf[0])+'":'+str(inf[1])+'},' 
+         json =json[:-1]  
+         json+= ']}'
          return json;
     def computeMixingProbabilities(self):
  

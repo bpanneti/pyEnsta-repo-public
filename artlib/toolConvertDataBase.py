@@ -99,7 +99,7 @@ class reader(QWidget):
         stamp = int(data['TimeStampBegin'])
      
      
-        self.date = QDateTime.fromMSecsSinceEpoch(stamp)#.toString("yyyy-MM-dd HH:mm:ss.zzzz")
+        self.date = QDateTime.fromMSecsSinceEpoch(stamp).toUTC()#.toString("yyyy-MM-dd HH:mm:ss.zzzz")
      
        
    
@@ -115,7 +115,7 @@ class reader(QWidget):
     def selectTrack(self):
         self.conn.row_factory = sqlite3.Row
         cur = self.conn.cursor()
-        c = cur.execute("SELECT  DISTINCT DeviceTrackID, ScenarioTrackID FROM Track where ActiveTime > 70  ;")
+        c = cur.execute("SELECT  DISTINCT DeviceTrackID, ScenarioTrackID FROM Track where ActiveTime > 100  ;")
         data = c.fetchall() 
        
         for row in data :
@@ -155,7 +155,8 @@ class reader(QWidget):
                 _state.id       = int(row['ID']) 
                 _state.idPere   = idPere
                 idPere          = _state.id 
-                _state.time     = QDateTime.fromMSecsSinceEpoch(int(row['ScenarioTimeStamp']))
+                _state.time     = QDateTime.fromMSecsSinceEpoch(int(row['ScenarioTimeStamp'])).toUTC()
+                
                 _classe = TARGET_TYPE.UNKNOWN
  
                       
@@ -163,12 +164,12 @@ class reader(QWidget):
                 
         
                 
-                x =   float(row['DeviceCoordinate1'])
-                y =   float(row['DeviceCoordinate2'])
+                x =    float(row['DeviceCoordinate1'])
+                y =    float(row['DeviceCoordinate2'])
                 z =   float(row['DeviceCoordinate3'])
                 
-                vx =   float(row['ScenarioVelocity1'])
-                vy =   float(row['ScenarioVelocity2'])
+                vx =    float(row['ScenarioVelocity1'])
+                vy =    float(row['ScenarioVelocity2'])
                 vz =   float(row['ScenarioVelocity3'])
                 #latitude.append(float(row['latitude']) )
                 #longitude.append(float(row['longitude']))
@@ -187,6 +188,10 @@ class reader(QWidget):
                 _state.mode = StateType.XYZ
       
                 P = np.eye(6)
+                P[0,0] = 150
+                P[2,2] = 150
+                P[4,4] = 150
+                
    
                 _state.covariance = P;#ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
                 _state.updateLocation() 
@@ -221,7 +226,7 @@ class reader(QWidget):
             node.typeNode   =  'SENSOR_NODE'
             node.Position.setWGS84(float(row['Coordinate2'] ),float(row['Coordinate1'] ),float(row['Coordinate3'] ))
             stamp = int(row['TimeStampBegin'])
-            node.date = QDateTime.fromMSecsSinceEpoch(stamp)#.toString("yyyy-MM-dd HH:mm:ss.zzzz")
+            node.date = QDateTime.fromMSecsSinceEpoch(stamp).toUTC()#.toString("yyyy-MM-dd HH:mm:ss.zzzz")
             node.Orientation.setOrientation(0.0,0.0,0.0)
             self.nodes.append(node)
             
@@ -233,7 +238,7 @@ class reader(QWidget):
         count = 0  
         for row in data :    
           stamp = int(row['TimeUpdated'])
-          dt    =  QDateTime.fromMSecsSinceEpoch(stamp)
+          dt    =  QDateTime.fromMSecsSinceEpoch(stamp).toUTC()
  
           angle =  -row['Double']
   

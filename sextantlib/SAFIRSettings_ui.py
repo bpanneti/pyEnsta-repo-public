@@ -19,10 +19,10 @@ from Managers.dataManager import DataManager as dataManager
 #from sensor import  Sensor, SensorMode, Scan
 import time
 #from sensor import Sensor, Node,SensorMode
-ADRESS_IP ='127.0.0.1'#'192.168.1.100' #
-TCP_IP    = '127.0.0.1' #'192.168.1.1'#ADRESS_IP.encode('utf-8')#'10.10.11.220'.encode('utf-8')#'localhost' 
+ADRESS_IP ='192.168.100.139' #'127.0.0.1'
+TCP_IP    = ADRESS_IP #'192.168.1.1'#ADRESS_IP.encode('utf-8')#'10.10.11.220'.encode('utf-8')#'localhost' 
 #'127.0.0.1'.encode('utf-8')
-TCP_PORT = 8080
+TCP_PORT = 16810
 BUFFER_SIZE = 1024 
 '''
 class Ui_Connection(object):
@@ -119,30 +119,31 @@ class server(QObject):
                 time.sleep(0.5)
             body = str("")
     def receiveScan(self,_scan  = None):
-        #print('in receive Scan from SEXTANT')
+        print('in receive Scan from SEXTANT')
         json = _scan.toJson()
-         
+        print(json)
+        return
         if json!='':
             self.sendJsonMessage(json)
     def receiveStates(self,_stats=[]):
         if _stats ==[]:
             return
-        
+        c=0
         body = str("")
         body = '<HTTP_JSON>'
         body  += '{'+\
             '"code": 11,'+\
             '"tracks": ['
         for states in _stats:
-            
-            body += states.toJson()+','
+            c=c+1
+            body += states.toJson(c,len(_stats))+','
             
         body = body[:-1]
         body +='],'+\
         '"scanTime": "'+_stats[0].time.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"'+\
         '}'
         body+='</HTTP_JSON>'
-        
+        print(body)
         self.send(body);
     def receiveSensors(self):
         body = str("")
