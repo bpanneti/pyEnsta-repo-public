@@ -309,7 +309,25 @@ class selectData(QWidget):
                     _strPlots = _str.split(',');
                     for i,t in zip(range(0,len(_strPlots)),_strPlots):
                         _plots.append(_strPlots[i])
-                  
+                    #=========================
+                    #additionnal information
+                    #=========================
+                    
+                    try:
+                        _state.addtionnalInfo.append((str(row['additionalInfo_1']),float(row['additionalValue_1'])))
+                    except:
+                        pass
+
+                    try:
+                        _state.addtionnalInfo.append((str(row['additionalInfo_2']),float(row['additionalValue_2'])))
+                    except:
+                        pass
+                    
+                    try:
+                        _state.addtionnalInfo.append((str(row['additionalInfo_3']),float(row['additionalValue_3'])))
+                    except:
+                        pass
+                    
                     states.append(_state)
                           
                 #même vide on emet

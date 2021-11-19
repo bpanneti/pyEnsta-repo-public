@@ -1306,7 +1306,7 @@ class MOP(QWidget):
                                 pts.setXYZ(_node.Position.x_UTM + dmax,_node.Position.y_UTM,0.0)
                               
                                 _angle = np.mod(np.pi/2 - _node.Orientation.yaw * np.pi/180  -  _cover.fov/2.0 * np.pi/180 + np.pi, 2*np.pi) - np.pi
-                                _angle = _angle +180.0
+                                _angle = _angle -np.pi/2
                                 verts = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])        
                                
                                 while _angle  < np.pi/2  - _node.Orientation.yaw*np.pi/180  + _cover.fov/2*np.pi/180:

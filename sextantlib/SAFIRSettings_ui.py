@@ -19,7 +19,7 @@ from Managers.dataManager import DataManager as dataManager
 #from sensor import  Sensor, SensorMode, Scan
 import time
 #from sensor import Sensor, Node,SensorMode
-ADRESS_IP ='192.168.100.139' #'127.0.0.1'
+ADRESS_IP ='192.168.100.24' #
 TCP_IP    = ADRESS_IP #'192.168.1.1'#ADRESS_IP.encode('utf-8')#'10.10.11.220'.encode('utf-8')#'localhost' 
 #'127.0.0.1'.encode('utf-8')
 TCP_PORT = 16810

@@ -85,8 +85,8 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
              vitesse         = -1
              string_date = hyu.strftime("%Y/%m/%dT%H:%M:%S")+'.'+str(int(int(msg.timestamp.microsecond)/10000))
              dateTime = QDateTime.fromString(string_date,"yyyy/MM/ddThh:mm:ss.z")
-             dateTime.setTimeSpec(Qt.UTC);
-             dateTime = dateTime.toLocalTime();
+             #dateTime.setTimeSpec(Qt.UTC);
+             #dateTime = dateTime.toLocalTime();
              flagOk = True
         if _file.endswith('.csv'):
              msg = _line;#[::5]
@@ -111,8 +111,8 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
                  continue
              dateTimeOld = dateTime;
              dateTime = dateTime.addSecs(deltaTime)
-             dateTime.setTimeSpec(Qt.UTC)
-             dateTime = dateTime.toLocalTime();
+             #dateTime.setTimeSpec(Qt.UTC)
+             #dateTime = dateTime.toLocalTime();
              flagOk = True
              Cumul.append(( longitude, latitude, altitude))
                     
@@ -156,8 +156,8 @@ def readSaveKMLFile(_file,output, Targetid, Targetname,TargetType ,deltaTime=0):
          vitesse         = -1
          
          dateTime= QDateTime.fromString(date+'T'+time,"yyyy/MM/ddThh:mm:ss.z")
-         dateTime.setTimeSpec(Qt.UTC)
-         dateTime = dateTime.toLocalTime();
+         #dateTime.setTimeSpec(Qt.UTC)
+         #dateTime = dateTime.toLocalTime();
          flagOk = True
          
          Cumul.append(( longitude, latitude, altitude))
@@ -261,8 +261,8 @@ def readSaveLLHFile(_file,_dataBase, Targetid, Targetname,TargetType,destroyGrou
              dateTime = QDateTime.fromString(string_date,"yyyy/MM/ddThh:mm:ss.z")
              dateTime = dateTime.addSecs(deltaTime)
            
-             dateTime.setTimeSpec(Qt.UTC);
-             dateTime = dateTime.toLocalTime();
+             #dateTime.setTimeSpec(Qt.UTC);
+             #dateTime = dateTime.toLocalTime();
              flagOk = True
         if _file.endswith('.csv'):
          msg = _line;#[::5]
@@ -289,8 +289,8 @@ def readSaveLLHFile(_file,_dataBase, Targetid, Targetname,TargetType,destroyGrou
              continue
          dateTimeOld = dateTime;
          dateTime = dateTime.addSecs(deltaTime)
-         dateTime.setTimeSpec(Qt.UTC)
-         dateTime = dateTime.toLocalTime();
+         #dateTime.setTimeSpec(Qt.UTC)
+         #dateTime = dateTime.toLocalTime();
          flagOk = True
          
             
@@ -441,8 +441,10 @@ class Form(QWidget):
             _type       = self.typeTarget.currentText()
            
             self.KML.setText(output[0])
+        deltaTime = 0
+        if not self.TimeCorrectionWidget.text()=='':
             deltaTime = float(self.TimeCorrectionWidget.text())
-            readSaveKMLFile(self.LLHWidget.text(),output[0],_id,_name,_type,deltaTime)
+        readSaveKMLFile(self.LLHWidget.text(),output[0],_id,_name,_type,deltaTime)
    def getLLHFileName(self):
         fname = QFileDialog.getOpenFileName(self, 'select LLH or NMEA file', 
          '',"file (*.LLH *.NMEA *.csv)")
@@ -460,7 +462,9 @@ class Form(QWidget):
         _id         = self.idTarget.text()
         _name       = self.nameTarget.text()
         _type       = self.typeTarget.currentText()
-        deltaTime = float(self.TimeCorrectionWidget.text())
+        deltaTime = 0
+        if not self.TimeCorrectionWidget.text()=='':
+            deltaTime = float(self.TimeCorrectionWidget.text())
         readSaveLLHFile(self.LLHWidget.text(),self.DataBase.text(),_id,_name,_type,self.destroyGroundTruth.isChecked() ,deltaTime)
         
         self.close() 

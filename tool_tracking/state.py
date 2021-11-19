@@ -149,7 +149,8 @@ class State(object):
                    '"additionalInfo":['
          for inf in self.addtionnalInfo:
              json+='{"'+str(inf[0])+'":'+str(inf[1])+'},' 
-         json =json[:-1]  
+         if self.addtionnalInfo!=[]:
+             json =json[:-1]  
          json+= ']}'
          return json;
     def computeMixingProbabilities(self):
