@@ -125,6 +125,7 @@ class Track:
         self.tree.getChilds(currentStates)
         for cState in currentStates:
             estate = State.copyState(cState.data)
+
             estate.prediction(time, True)
 
             self.addState(estate, cState)
@@ -144,8 +145,22 @@ class Track:
     def update(self, plots=[], sensorPosition=Position(), sensorOrientation=Orientation()):
         # self.tree.displayTree()
         currentStates = []
- 
-        if len(plots) > 1:
+        if self.trackerType == TRACKER_TYPE.CMKF_PDAF :
+            self.tree.getChilds(currentStates)
+            dateTime = plots[0].dateTime
+            for cState in currentStates:
+                    print('----> update')
+                    estate = State.copyState(cState.data)
+         
+                    estate.prediction(dateTime)
+
+                    estate.estimation(plots, self.trackerType, sensorPosition, sensorOrientation)
+                                       
+
+                    self.addState(estate, cState)
+            currentStates.clear()
+                
+        elif len(plots) > 1:
             self.tree.getChilds(currentStates)
             dateTime = plots[0].dateTime
             for cState in currentStates:
@@ -161,9 +176,11 @@ class Track:
 
         elif len(plots) == 1:
             plot = plots[0]
-            print(['update ------> track id',self.id])
-            print(self.taillePiste())
-            
+            # print(['update ------> track id',self.id])
+            # print(self.taillePiste())
+            # print(plots)
+            # print(plot)
+            # print(plots[0].type)
             if self.taillePiste() == 1 and plot.type == PLOTType.POLAR:
                 
                 print(['Initialisation ------> track id',self.id])
@@ -189,7 +206,7 @@ class Track:
          
                     estate.prediction(plot.dateTime)
 
-                    estate.estimation(plot, self.trackerType, sensorPosition, sensorOrientation)
+                    estate.estimation([plot], self.trackerType, sensorPosition, sensorOrientation)
                     
                     estate.classification(plot) #ENSTA Todo 
                     
@@ -444,7 +461,7 @@ class Track:
         return coords
         
     def displayTrack(self, axes, canvas,displayTack = True, displayCovariance = True,displayIcone = True):
-
+     
         self.axes = axes
         self.canvas = canvas
 

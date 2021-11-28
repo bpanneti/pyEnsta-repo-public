@@ -1292,6 +1292,7 @@ class mainwindow(QMainWindow):
 
 
     def receiveTime(self,_time ):
+        
         if not self.isStarted :
             return
         #print(time.toString("hh:mm:ss.z"))
@@ -1309,6 +1310,8 @@ class mainwindow(QMainWindow):
         mainwindow.variableGlobale -= 1
        
         #position des cibles
+
+        
 
         for _target in self.manager.targets():
             if utm_isDefined() == False:
@@ -1334,13 +1337,23 @@ class mainwindow(QMainWindow):
                     self.sextantServer.sendJsonMessage(json)
                 
            
-           
+       
+ 
+        #self.canvas.draw_idle()
+#        
+ 
+        #self.canvas.blit(self.axes.bbox)
+   
+ 
+        xlim = self.axes.get_xlim()
+        ylim = self.axes.get_ylim()
+        self.axes.set_xlim(xlim)
+        self.axes.set_ylim(ylim)  
         self.canvas.draw()
-#
-#       
-#        self.canvas.flush_events()
-#        self.canvas.blit(self.axes.bbox)
-#        self.canvas.update()
+        self.canvas.flush_events()
+ 
+        
+        #self.canvas.update()
         QApplication.processEvents()
  
 

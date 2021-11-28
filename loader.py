@@ -1126,22 +1126,24 @@ class data(QWidget):
                 _sensors = _str.split(',');
                 
   
-                if tracker.tracker!=None:
-                    for i in _targets:
-                        try:
-                            tracker.tracker.targets.append(int(i))
-                        except:
-                            print("Empty targets list")
+               
                  
                 for _sensor in  dataManager.instance().sensors():
           
                     if index_of(str(_sensor.id),_sensors  )!=-1:
                         
                         tracker.sensors.append(_sensor)
-                        if tracker.filter == TRACKER_TYPE.GMPHD:
-                                tracker.trackerInfos = _sensor
+                        #if tracker.filter == TRACKER_TYPE.GMPHD:
+                        tracker.trackerInfos = _sensor
                             
-                tracker.loadTracker()        
+                tracker.loadTracker()    
+                if tracker.tracker!=None:
+                   for i in _targets:
+                       try:
+                           tracker.tracker.targets.append(int(i))
+                       except:
+                           print("Empty targets list")
+                            
                 trackers.append(tracker)
                      
             self.emitTrackers.emit(trackers)
@@ -1478,6 +1480,7 @@ class data(QWidget):
             cur = self.conn.cursor()
             c = cur.execute("SELECT  date  FROM state_t ORDER BY date DESC LIMIT 1;")
             data = c.fetchone()
+            dateEnd = date.addSecs(3600)
             if data:
                 dateEnd=QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
           

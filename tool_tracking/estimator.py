@@ -20,9 +20,9 @@ class TRACKER_TYPE(Enum):
     IMM_GNNSF   = 5
     RMKF        = 11
     SIR         = 12
-    KPF         = 7
+    KPF         = 9
     UKF         = 8
-    CMKF_PDAF   = 9
+    CMKF_PDAF   = 7
     CMKF_JPDAF  = 10
     GMPHD       = 6
     
@@ -126,7 +126,7 @@ class Estimator(QObject):
 
     @abstractmethod
     def run(self):
-   
+
       
 #        if self.mutex.tryLock()==False:
 #            return 

@@ -635,8 +635,9 @@ class GIS(QWidget):
                         
             self.mode = GISMode.nomode
             #self.canvas.draw()
-            self.canvas.draw_idle()
-            #self.canvas.blit(self.axes.bbox)
+            #self.canvas.draw_idle()
+            self.canvas.blit(self.axes.bbox)
+            self.canvas.draw()
             #self.mutex.unlock()
 #            self.canvas.blit(self.axes.bbox)
 #            self.canvas.update()
@@ -1059,7 +1060,7 @@ class GIS(QWidget):
             
   
         def receiveTarget(self, _target ):
-              
+           
             #self.tree.setUpdatesEnabled(False);
  
             listitems = self.tree.findItems('Targets', Qt.MatchExactly | Qt.MatchRecursive, 0)
@@ -1162,10 +1163,14 @@ class GIS(QWidget):
                     _track.displayTrack(self.axes,self.canvas,_tracker.displayTrackFig,_tracker.displayCovariancekFig,_tracker.displayIconeFig)
                 _tracker.mutex.unlock()    
         def receiveScan(self, scan = None):
+        
             #scan.sensor.clear()
             #print('in GIS receive Scan')
             scan.sensor.displayScan(self.axes,self.canvas)
-            self.canvas.draw_idle()
+           # self.canvas.blit(self.axes.bbox)
+            #self.canvas.draw_idle()
+            #self.canvas.flush_events()
+            #self.canvas.draw()
             
         def isDetectable(self,line= QLineF(),hauteurObjet = 0):
             if self.building == []:

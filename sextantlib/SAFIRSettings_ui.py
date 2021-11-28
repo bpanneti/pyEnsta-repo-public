@@ -119,9 +119,9 @@ class server(QObject):
                 time.sleep(0.5)
             body = str("")
     def receiveScan(self,_scan  = None):
-        print('in receive Scan from SEXTANT')
+        #print('in receive Scan from SEXTANT')
         json = _scan.toJson()
-        print(json)
+       
         return
         if json!='':
             self.sendJsonMessage(json)

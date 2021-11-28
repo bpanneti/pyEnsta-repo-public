@@ -95,8 +95,7 @@ class imm(Estimator):
             currState.state       = currState.xPred
             currState.covariance  = currState.pPred
 
-            print(currState.state)
-            print(currState.covariance)
+ 
             currState.time = time
 
             currState.updateLocation()

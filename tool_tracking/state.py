@@ -8,12 +8,14 @@ from math import atan2, sqrt
 from target import TARGET_TYPE
 from itertools import count
 from copy import deepcopy as deepCopy
+from sensor import Sensor
 
 from tool_tracking.estimator import TRACKER_TYPE
 from tool_tracking.motionModel import MotionModel, StateType 
 import tool_tracking.ekf as EKF
 import tool_tracking.cmkf as CMKF
 import tool_tracking.imm as IMM
+import tool_tracking.PDAF_cmkf as PDAF
 #import tool_tracking.sir as SIR
 #import tool_tracking.pf as PF
 from tool_tracking.BiasProcessing.corrector.roadLms import RoadLms
@@ -204,7 +206,7 @@ class State(object):
     def prediction(self, time=QDateTime, flagChange=True):
         if  self.filterType == TRACKER_TYPE.EKF  :
             EKF.ekf.predictor(self,time , flagChange)
-        elif  self.filterType == TRACKER_TYPE.CMKF : 
+        elif  self.filterType == TRACKER_TYPE.CMKF or self.filterType == TRACKER_TYPE.CMKF_PDAF: 
             CMKF.cmkf.predictor(self,time , flagChange)
         elif  self.filterType == TRACKER_TYPE.IMM : 
             IMM.imm.predictor(self,time , flagChange)
@@ -316,7 +318,7 @@ class State(object):
                        self.stateModel[3,[ind]]                = velocity[1]
                        self.stateModel[5,[ind]]                = velocity[2]
 
-    def estimation(self, plot, filterType=TRACKER_TYPE.UNKNOWN, posCapteur=Position(), orientationCapteur=Orientation()):
+    def estimation(self, plots = [], filterType=TRACKER_TYPE.UNKNOWN, posCapteur=Position(), orientationCapteur=Orientation()):
         self.timeWithoutPlot = 0
         self.isEstimated = True
 
@@ -330,18 +332,20 @@ class State(object):
             print("\n[Error] estimation no type provided.\n")
             return
 
-        if plot.type == PLOTType.ANGULAR and self.mode == StateType.XY:
+        if plots[0].type == PLOTType.ANGULAR and self.mode == StateType.XY:
                #==============================
                # UKF
                #==============================
             print('-----> ukf')
             return
-        elif  filterType == TRACKER_TYPE.EKF and plot.type == PLOTType.POLAR and self.mode == StateType.XY:
-            EKF.ekf.estimator(plot, self, posCapteur, orientationCapteur)
-        elif filterType == TRACKER_TYPE.CMKF  and (plot.type == PLOTType.POLAR or plot.type == PLOTType.SPHERICAL) and self.mode == StateType.XY:
-              CMKF.cmkf.estimator(plot, self, posCapteur, orientationCapteur)
-        elif filterType == TRACKER_TYPE.IMM  and (plot.type == PLOTType.POLAR or plot.type == PLOTType.SPHERICAL) and self.mode == StateType.XY:
-              IMM.imm.estimator(plot, self, posCapteur, orientationCapteur)      
+        elif  filterType == TRACKER_TYPE.EKF and plots[0].type == PLOTType.POLAR and self.mode == StateType.XY:
+            EKF.ekf.estimator(plots[0], self, posCapteur, orientationCapteur)
+        elif filterType == TRACKER_TYPE.CMKF  and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL) and self.mode == StateType.XY:
+              CMKF.cmkf.estimator(plots[0], self, posCapteur, orientationCapteur)
+        elif filterType == TRACKER_TYPE.IMM  and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL) and self.mode == StateType.XY:
+              IMM.imm.estimator(plots[0], self, posCapteur, orientationCapteur)   
+        elif  filterType == TRACKER_TYPE.CMKF_PDAF and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL)  and self.mode == StateType.XY:
+              PDAF.PDAF_cmkf.estimator(plots, self, posCapteur, orientationCapteur) 
 #            elif filterType == TRACKER_TYPE.SIR:
 #                SIR.Sir.estimator(plot, self, posCapteur, orientationCapteur)
 #            elif filterType == TRACKER_TYPE.KPF:

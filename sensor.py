@@ -1885,9 +1885,10 @@ class Sensor(QWidget):
                 else:
                     _idTrack = self.targetTable[_target.id][0]
                     _scan.addTrack(PositionAtTime,_target.id,self.targetTable[str(_target.id)] ,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
-            else:
-                  self.numTrack +=1
-                  self.targetTable[str(_target.id)] = self.numTrack 
+            else  :
+                  if self.internalTracker:
+                   self.numTrack +=1
+                   self.targetTable[str(_target.id)] = self.numTrack 
         #=============================
         # génération des fausses alarmes
         #=============================   

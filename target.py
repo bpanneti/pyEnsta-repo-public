@@ -203,22 +203,21 @@ class Target(QWidget):
 
             self.textObj =None 
  
-  
+     
 
         
         flag, PositionAtTime,VelocityTime = self.positionAtTime(_currentTime)
 
- 
+
         if  flag == True: 
             latitude    = PositionAtTime.latitude
             longitude   = PositionAtTime.longitude 
- 
+             
             self.locationObj,   = self.axes.plot(longitude,latitude,color = self.color.name() , linewidth= 2,marker = 'o',markerfacecolor = 'blue',markersize = 4,visible = self.locationIsVisible )
             self.textObj        = self.axes.text(longitude,latitude, 'target : '+ str(self.id)+' / '+ str(self.name),   bbox={'facecolor':'red', 'alpha':0.5, 'pad':10} ,visible= self.locationIsVisible  )
+            
 
-
-#            self.axes.draw_artist(self.locationObj )
-#            self.axes.draw_artist(self.textObj )  
+ 
 
    
     def smoothReealTrajectorty(self):

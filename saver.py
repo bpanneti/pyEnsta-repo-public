@@ -417,7 +417,7 @@ class saveData(QWidget):
  
         self.executeRequest(self.conn,Command)
 
-        print('reference point saved')    
+        #print('reference point saved')    
          
      def saveReferencePoint(self):
         REFERENCE_TIME =_timer.getReferenceTime()  
@@ -438,7 +438,7 @@ class saveData(QWidget):
  
         self.executeRequest(self.conn,Command)
 
-        print('reference point saved')
+        #print('reference point saved')
      def saveGIS(self,_gis):
         #routes
         if _gis.road:
@@ -449,7 +449,7 @@ class saveData(QWidget):
             Command.append(("'%s');")%(_gis.road.file));
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('road saved')
+            #print('road saved')
         #buildings
         if _gis.building:
             Command = []
@@ -459,7 +459,7 @@ class saveData(QWidget):
             Command.append(("'%s');")%(_gis.building.file));
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('building saved')
+            #print('building saved')
         #vegetation
         if _gis.vegetation:
             Command = []
@@ -469,7 +469,7 @@ class saveData(QWidget):
             Command.append(("'%s');")%(_gis.vegetation.file));
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('vegetation saved')
+            #print('vegetation saved')
         #water
         if _gis.water:
             Command = []
@@ -479,7 +479,7 @@ class saveData(QWidget):
             Command.append(("'%s');")%(_gis.water.file));
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('water saved')
+            #print('water saved')
         #waterArea
         if _gis.waterArea:
             Command = []
@@ -489,7 +489,7 @@ class saveData(QWidget):
             Command.append(("'%s');")%(_gis.waterArea.file));
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('waterArea saved')
+            #print('waterArea saved')
         #images
         if _gis.maps:
             Command = []
@@ -505,7 +505,7 @@ class saveData(QWidget):
             Command.append("}');");
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('images saved')
+           # print('images saved')
         #dted
         if _gis.dtedList:
             Command = []
@@ -521,7 +521,7 @@ class saveData(QWidget):
             Command.append("}');");
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('dted saved')
+           # print('dted saved')
         if _gis.x0!=None and _gis.y0!=None and _gis.y1!=None and _gis.x1!=None:
             Command = []
             Command.append("insert into gis_t ");
@@ -535,8 +535,8 @@ class saveData(QWidget):
             Command.append("}');");
             Command = ''.join(Command)
             self.executeRequest(self.conn,Command)
-            print('area saved')
-        print('gis saved')
+            #print('area saved')
+        #pr#int('gis saved')
      def saveClass(self):
         for type_t in TARGET_TYPE: 
             Command = []
@@ -577,7 +577,7 @@ class saveData(QWidget):
                 Rows.append(row)
    
          self.executeManyRequests(self.conn,Command,Rows)
-         print('parameter saved')
+         #print('parameter saved')
 
      def saveBias(self, bias):
          if bias == None :
@@ -594,7 +594,7 @@ class saveData(QWidget):
          Command = ''.join(Command)
 
          self.executeRequest(self.conn,Command)
-         print('Bias saved')
+         #print('Bias saved')
 
      def saveTrackers(self,_tracker  ):
  
@@ -909,7 +909,7 @@ class saveData(QWidget):
      
              self.executeManyRequests(self.conn,Command,ValueRows)
 
-             print('target saved')
+             #print('target saved')
 
      def saveBiasCorretors(self, biasCorrector):
          if biasCorrector == None:

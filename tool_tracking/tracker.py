@@ -16,6 +16,8 @@ from tool_tracking.ekf import ekf
 from tool_tracking.GNNSF_cmkf import GNNSF_cmkf
 from tool_tracking.GNNSF_imm import GNNSF_imm
 from tool_tracking.GMPHD import GMPHD
+from tool_tracking.PDAF_cmkf import PDAF_cmkf
+
 #from tool_tracking.rmkf import rmkf
 #from tool_tracking.sir import Sir, Infos
 # from tool_tracking.PMBM import PMBM
@@ -325,7 +327,7 @@ class Tracker(QObject):
     def loadTracker(self):
         idTargets = []
         
-        tracker = [None, cmkf, ekf , imm, GNNSF_cmkf,GNNSF_imm, GMPHD]#, rmkf, GNNSF_cmkf, Sir, pf]
+        tracker = [None, cmkf, ekf , imm, GNNSF_cmkf,GNNSF_imm, GMPHD, PDAF_cmkf]#, rmkf, GNNSF_cmkf, Sir, pf]
 
         if self.filter == TRACKER_TYPE.UNKNOWN:
             print("\nNo tracker is selected\n")
