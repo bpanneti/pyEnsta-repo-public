@@ -10,12 +10,6 @@ MonteCarlo
 sandbox
 metrics/__pycache__/
 sextantlib/__pycache__/
-data/sissonne.tif
+data/carto/sissonne.tif
 data/shapefiles/
 data/base
-<<<<<<< HEAD
-data/
-**/__pycache__/
-*.pyc
-=======
->>>>>>> b13f1b3171192f513aa51430f4187516a718b558
