@@ -19,18 +19,16 @@ import threading
 import numpy as np
 import io
 from Managers.dataManager import DataManager as dataManager
-from sensor import Node, Sensor,SensorCoverage, FOVType, SensorBias
+from sensor import Node, Sensor,SensorCoverage, FOVType
 from scan import Plot,PLOTType, Scan, State as plotState
 from target  import Target,TARGET_TYPE, RECORDED_TYPE
+ 
+from toolTracking.tracker import Tracker,TRACKER_TYPE
 
-from tool_tracking.tracker import Tracker
-
-from tool_tracking.track import Track
-from tool_tracking.estimator import TRACKER_TYPE
-from tool_tracking.motionModel import StateType
-from tool_tracking.state import State
-import tool_tracking as tr
-from tool_tracking.BiasProcessing.loader.biasCorrectorLoader import BiasCorrectorLoader
+from toolTracking.track import Track
+from toolTracking.utils import StateType
+from toolTracking.state import State
+ 
 
 import matplotlib.pyplot as plt
 
@@ -233,13 +231,14 @@ class selectData(QWidget):
                       detections.append(_plot)
       
                 #même vide on emet
-                self.emitDetections.emit(detections)
+                if detections!=[]:
+                    self.emitDetections.emit(detections)
     
             
             #==================#        
             # select states    #
             #==================#
-         
+      
                 self.conn.row_factory = sqlite3.Row
                 cur = self.conn.cursor()
                 #4print(("SELECT  * FROM plot_t where date<='%s' and date>'%s';"%(self.date.toString("yyyy-MM-dd HH:mm:ss.z"),self.previousDate.toString("yyyy-MM-dd HH:mm:ss.z"))))
@@ -332,7 +331,7 @@ class selectData(QWidget):
                           
                 #même vide on emet
                 self.emitStates.emit(states)         
-            
+              
             
     def connection(self,conn):
       
@@ -352,7 +351,7 @@ class data(QWidget):
     emitSelectedDetections  = pyqtSignal(list)
     emitTargets             = pyqtSignal()
     emitTrackers            = pyqtSignal(list)
-    emitBiasCorrectors      = pyqtSignal()
+ 
     emitStates              = pyqtSignal(list)
     def __init__(self, parent=None):
     
@@ -381,7 +380,7 @@ class data(QWidget):
         
         self.emitStates.emit(_states)
     def receiveDetections(self, _detections):
-        #print("---> receiveDetections ")
+ 
         flag = False
         
         if _detections ==[]:
@@ -602,18 +601,19 @@ class data(QWidget):
             cur = self.conn.cursor()
             c = cur.execute("SELECT  *  FROM referencePoint_t;")
             data = c.fetchone()  
-            self.message.emit((" ==== reference point %f %f %f")%(data['longitude'],data['latitude'],data['altitude']))
-            self.message.emit((" ==== reference time %s")%(data['date']))
-            self.conn.row_factory = False;
+            if data:
+                self.message.emit((" ==== reference point %f %f %f")%(data['longitude'],data['latitude'],data['altitude']))
+                self.message.emit((" ==== reference time %s")%(data['date']))
+                self.conn.row_factory = False;
+                
+                
+                
             
-            
-            
-        
-            
-            
-            self.message.emit((" ==== reference point %f %f %f")%(data['longitude'],data['latitude'],data['altitude']))
-            self.message.emit((" ==== reference time %s")%(data['date']))
-            self.conn.row_factory = False;
+                
+                
+#                self.message.emit((" ==== reference point %f %f %f")%(data['longitude'],data['latitude'],data['altitude']))
+#                self.message.emit((" ==== reference time %s")%(data['date']))
+#                self.conn.row_factory = False;
             
             
     def selectGIS(self,_gis):
@@ -930,6 +930,7 @@ class data(QWidget):
             node.color = QColor(int(color[0]),int(color[1]),int(color[2]))
  
             node.typeNode   = row['type_node']
+            node.name       = row['m_nom']
      
             node.Position.setWGS84(float(row['longitude'] ),float(row['latitude'] ),float(row['altitude'] ))
            
@@ -1051,42 +1052,14 @@ class data(QWidget):
                         _sensor.sensorCoverage.append(coverage)
                         break
         
-        #=============#        
-        # select bias #
-        #=============#   
-
-        self.conn.row_factory = sqlite3.Row
-        cur = self.conn.cursor()
-        c = cur.execute(("SELECT name FROM sqlite_master where type='table' AND name='bias_t';"))
-        result = c.fetchone()
-        if result :
-            c = cur.execute( "SELECT  * FROM bias_t ;") 
-            data = c.fetchall()  
-
-            for row in data :
-                bias = SensorBias(int(row['id_sensor']), float(row['yaw']), float(row['x_ENU']), float(row['y_ENU']))
-
-                for _sensor in sensors:
-                    if int(_sensor.id) == bias.id:
-                        _sensor.bias = bias
-                        break
-        else: 
-             print('no table bias_t')
-
+ 
         if sensors!=[]:
             self.emitSensors.emit(sensors)
             dataManager.instance().addSensors(sensors) 
             
         self.conn.row_factory = False;
 
-            #=======================#        
-            # select bias corrector #
-            #=======================#
-        stmt = "SELECT name  FROM sqlite_master WHERE type='table'  AND name='roadCorrector_t' ; "
-        c= cur.execute(stmt)
-        result = c.fetchone()
-        if result:
-            BiasCorrectorLoader.load(self.conn, nodes, self.emitBiasCorrectors)
+ 
 
             #==================#        
             # select tracker#
@@ -1102,7 +1075,7 @@ class data(QWidget):
             data = c.fetchall()  
               
             trackers =[]
-     
+          
             for row in data :
           
       
@@ -1110,10 +1083,13 @@ class data(QWidget):
                 tracker         = Tracker()
                 tracker.id      = row['id_tracker']
                 tracker.id_node = row['id_node']
-                tracker.filter  = TRACKER_TYPE[row['type']]
+   
+                for _type in TRACKER_TYPE:
+                    if _type.value.name == row['type']:
+                        
+                        tracker.filter  = _type
                 tracker.name    = row['name']
-                if tracker.filter == TRACKER_TYPE.SIR:
-                    tracker.trackerInfos = tr.sir.Infos(int(row['particlesNumber']), float(row['threshold']))
+                 
                 
                 _str =  str(row['targets']) 
                 _str =_str.replace('{','');
@@ -1135,7 +1111,7 @@ class data(QWidget):
                         tracker.sensors.append(_sensor)
                         #if tracker.filter == TRACKER_TYPE.GMPHD:
                         tracker.trackerInfos = _sensor
-                            
+                         
                 tracker.loadTracker()    
                 if tracker.tracker!=None:
                    for i in _targets:
@@ -1145,7 +1121,7 @@ class data(QWidget):
                            print("Empty targets list")
                             
                 trackers.append(tracker)
-                     
+               
             self.emitTrackers.emit(trackers)
             self.conn.row_factory = False;
         else: 
@@ -1369,7 +1345,7 @@ class data(QWidget):
             _track.cutChilds()
         
         return tracks
-    def newTargets(self):       
+    def newTargets(self,gis=None):       
             #==================#        
             # select targets   #
             #==================# 
@@ -1396,8 +1372,8 @@ class data(QWidget):
                   _target.startTime     = QDateTime.fromString(row['date'],"yyyy-MM-dd HH:mm:ss.zzz")
                   _target.id            = int(row['id_target'])
                   _target.name          = row['name']
-                  _target.recordedType = RECORDED_TYPE.BASE_ON_TIMETOWAYPOINTS
-
+                  _target.recordedType  = RECORDED_TYPE.BASE_ON_TIMETOWAYPOINTS
+                  _target.gis           = gis
 #                  try:
 #                      _target.isRandomVelocity = int(row['isRandomVelocity'])
 #                      if _target.isRandomVelocity== True:
@@ -1470,17 +1446,20 @@ class data(QWidget):
             cur = self.conn.cursor()
             c = cur.execute("SELECT  *  FROM referencePoint_t;")
             data = c.fetchone()  
- 
-            self.referencePoint.emit(('%f %f %f')%(data['longitude'],data['latitude'],data['altitude']) )
-            date =QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
-            self.referenceTime.emit(date)
+            dateEnd = None
+            if data:
+                self.referencePoint.emit(('%f %f %f')%(data['longitude'],data['latitude'],data['altitude']) )
+                date =QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
+                self.referenceTime.emit(date)
+                dateEnd = date.addSecs(3600)
+
             self.conn.row_factory = False;
 
             self.conn.row_factory = sqlite3.Row
             cur = self.conn.cursor()
             c = cur.execute("SELECT  date  FROM state_t ORDER BY date DESC LIMIT 1;")
             data = c.fetchone()
-            dateEnd = date.addSecs(3600)
+
             if data:
                 dateEnd=QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
           
@@ -1490,8 +1469,8 @@ class data(QWidget):
             data = c.fetchone()
             if data :
                 dateEnd=QDateTime.fromString(data['date'],'yyyy-MM-dd HH:mm:ss.z')
-            
-            self.endTime.emit(dateEnd)
+            if dateEnd!=None:
+                                self.endTime.emit(dateEnd)
     def newArray(self,filename):
 
         self.conn = sqlite3.connect(filename, detect_types=sqlite3.PARSE_DECLTYPES)
@@ -1538,16 +1517,18 @@ class data(QWidget):
               _plot.value_info_2   =  float(row['data_2'])
               detections.append(_plot)
             return detections
-    def loadData(self,filename):
-        print('--> loadData')
+    def loadData(self,filename,gis=None):
+        #print('--> loadData')
 
         self.conn = self.create_connection(filename) 
         #print('infoData')
         self.infoData()
         #print('newReferences')
         self.newReferences()
+        if gis!=None:
+            self.selectGIS(gis)
         #print('loadTargets')
-        self.newTargets()
+        self.newTargets(gis)
         #print endtime
         
        

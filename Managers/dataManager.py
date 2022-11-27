@@ -99,7 +99,11 @@ class DataManager:
     def addNode(self, node):
         if not isinstance(node, Node):
             print("[WARNING] It's not a node!")
-        
+         
+        for _node in self._nodes:
+            if _node.id == node.id:
+                return
+            
         self._nodes.append(node)
     def addSensor(self, _sensor):
         if not isinstance(_sensor, Sensor):

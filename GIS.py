@@ -16,12 +16,10 @@ from matplotlib.backends.backend_qt5agg import (
 import numpy as np
 from target  import Target
 from scan import  PLOTType
-from tool_tracking.BiasProcessing.biasTreeInterface import BiasTreeInterface
-from tool_tracking.BiasProcessing.corrector.biasCorrector import BiasCorrector
-from tool_tracking.BiasProcessing.corrector.roadCorrector import RoadCorrector
+
 from Managers.dataManager import DataManager
 
-from tool_tracking.Gaussian import GraphWidget2
+#from toolTracking.Gaussian import GraphWidget2
 
 class GISMode(Enum):
     nomode          = 0
@@ -34,8 +32,7 @@ class GISMode(Enum):
     updatePlatform  = 7
     updateNode      = 8
     updatePlot      = 9
-    updateBiasCorrector = 10
-    updateState     = 11
+    updateState     = 10
 
 
  
@@ -147,9 +144,7 @@ class GIS(QWidget):
             
             #Dictionary of biasControler
 
-            self.biaisCorrectors = dict()
 
-            self.biasTreeInterface = BiasTreeInterface(self.biaisCorrectors, self.tree, self.message)
         def  removeStates(self):
              if self.statesObj!=[]:
                 self.axes.lines.remove(self.statesObj)
@@ -240,7 +235,7 @@ class GIS(QWidget):
             self.bbox_itm.child(3).setText(1, str(self.y1))
 
             if self.rect == None : 
-                self.rect = Rectangle((self.x0,self.y0), self.x1-self.x0, self.y1 - self.y0, color='yellow', edgecolor='violet',alpha = 0.5)
+                self.rect = Rectangle((self.x0,self.y0), self.x1-self.x0, self.y1 - self.y0, facecolor='yellow', edgecolor='violet',alpha = 0.5)
                 self.axes.add_patch(self.rect)
             else:
                 self.rect.set_width(float(self.x1 - self.x0))
@@ -300,7 +295,8 @@ class GIS(QWidget):
     
         def init(self):
      
-            self.fileName = 'data/carto/dnb_land_ocean_ice.2012.3600x1800_geo.tif'#'MOS_EU_LAEA_2000.tif'
+            self.fileName =  'data/carto/dnb_land_ocean_ice.2012.3600x1800_geo.tif'#'MOS_EU_LAEA_2000.tif'
+            
             self.currentItem = self.layerCarto
             self.openFile('Maps') 
           
@@ -337,11 +333,12 @@ class GIS(QWidget):
             if itemPere and   itemPere.text(0) == 'DTED':  
                     u = 0
                     for layer in self.dtedList:
+         
                         if int(item.text(0))==u:
-  
+                            print("extinction des feux")    
                             layer.set_visible(item.checkState(column))
                             break
-                    u = u+1
+                        u = u+1
             if itemPere and (itemPere.text(0) == 'road' or itemPere.text(0) == 'vegetation' or itemPere.text(0) == 'building' or itemPere.text(0) == 'water' or itemPere.text(0) == 'waterArea'):
                        for layer in self.road.containers:
                             if layer.fclass == item.text(0)  :
@@ -487,14 +484,7 @@ class GIS(QWidget):
                 self.openFile()
             
             '''    
-        def biasCorrectorRoad(self):
-            if self.road == []:
-                return
-                
-            for key in self.biaisCorrectors:
-                if isinstance(self.biaisCorrectors[key], RoadCorrector):
-                    self.biaisCorrectors[key].loadRoad(self.road.containers)
-
+ 
         def actionOpenFile(self):
             
                  
@@ -505,7 +495,7 @@ class GIS(QWidget):
                 elif layer  == 'Maps':
                     self.fileName,filter  = QFileDialog.getOpenFileName(self.tree, 'open ' + layer + ' file', '.','*.tif')
                 elif layer  == 'DTED':
-                    self.fileName = QFileDialog.getOpenFileName(self.tree, 'open ' + layer + ' file', '.','*.dt2;*.tif')
+                    self.fileName,filter  = QFileDialog.getOpenFileName(self.tree, 'open ' + layer + ' file', '.',str("file (*.dt2 *.tif)"))
                 self.openFile(layer)    
         def openFile(self,layer):        
                 
@@ -513,7 +503,7 @@ class GIS(QWidget):
                 if self.fileName and layer  == 'road':
                      self.road = shpFile(self.fileName, layer)
                      self.road.update()
-                     self.biasCorrectorRoad()
+          
                      self.currentItem.setText(1,self.fileName)
                      self.road.display(self.axes,self.bbox,self.canvas)
                      #creation des sous layer                      
@@ -572,28 +562,31 @@ class GIS(QWidget):
                         self.message.emit("Carto has been read and bbox = " + str(carte.x0)+' '+ str(carte.x1) + ' '+ str(carte.y1)+ ' '+ str(carte.y0))
                         #pyqtSignal("Carto has been read and bbox = " + str(carte.x0)+' '+ str(carte.x1) + ' '+ str(carte.y1)+ ' '+ str(carte.y0),"message")
                 elif self.fileName and layer =='DTED':
-                        
-                        if '.tif' in self.fileName[0]:
+                    
+                        carte = None
+                        if '.tif' in self.fileName:
                             carte = cartoFile()
-                            carte.read(self.fileName[0],TYPE_CARTO.CARTO)
-                        if '.dt2'  in self.fileName[0]:
+                            carte.read(self.fileName,TYPE_CARTO.CARTO)
+                     
+                        if '.dt2' in self.fileName:
+                       
                             carte = dted()
-                            carte.read(self.fileName[0])
-                        if self.fileName[0]:
+                            carte.read(self.fileName)
+                        if self.fileName and carte != None:
                             
                             self.dtedList.append(carte)
-                            _itm =  QTreeWidgetItem(itmPere,[str(itmPere.childCount()) ,self.fileName[0],''])
+                            _itm =  QTreeWidgetItem(itmPere,[str(itmPere.childCount()) ,self.fileName,''])
                             _itm.setCheckState(0, Qt.Checked)
                         
                             
-                            print("DTED  has been read and bbox = " + str(carte.x0)+' '+ str(carte.x1) + ' '+ str(carte.y1)+ ' '+ str(carte.y0))
+                            #print("DTED  has been read and bbox = " + str(carte.x0)+' '+ str(carte.x1) + ' '+ str(carte.y1)+ ' '+ str(carte.y0))
                         #self.emit(SIGNAL("message"),"DTED has been read and bbox = " + str(carte.x0)+' '+ str(carte.x1) + ' '+ str(carte.y1)+ ' '+ str(carte.y0))
                      
                 self.mode = GISMode.updateCarto
                 self.run()
                  
         def run(self):
-       
+            
             #self.mutex.lock() 
 
             #print(["nb detections" ,len(self.detections)])
@@ -616,6 +609,7 @@ class GIS(QWidget):
                 #         carto.display(self.axes) 
                 if self.dtedList:
                     for carto in self.dtedList:
+            
                         carto.display(self.axes)
             if self.mode == GISMode.updateNode:
                     for _node in self.manager.nodes():
@@ -626,9 +620,11 @@ class GIS(QWidget):
             if self.mode == GISMode.updateState:
                     self.drawStates();
             if self.mode == GISMode.updateSensor:
+             
                     for _sensor in self.manager.sensors():
                         _sensor.toDisplay(self.axes,self.canvas)
             if self.mode == GISMode.updateTarget:
+  
                     for _target in self.manager.targets():
                         _target.toDisplay(self.axes)            
                         
@@ -759,8 +755,7 @@ class GIS(QWidget):
             
                menu.exec_(QCursor.pos())
 
-           elif layer == 'Bias corrector':
-               self.biasTreeInterface.rightClick(name)
+ 
 
            elif layer=='Nodes' :
                menu=QMenu()
@@ -805,7 +800,7 @@ class GIS(QWidget):
                addTracker.setIcon(icon)
                addTracker.triggered.connect( self.addTracker)
 
-               self.biasTreeInterface.addBiasCorrector(menu, name, "Add")
+        
                
                #colorAction.triggered.connect( self.changeColor)
                #fontAction = QAction("Change layer style",self.tree)
@@ -996,12 +991,14 @@ class GIS(QWidget):
                          break;
 
                 if _itmTracker == None :
+
                         _itmTracker  = QTreeWidgetItem(_itm,['id','name','type'])
                         _itmTracker.setText(0, "Tracker")
                         s_itm =  QTreeWidgetItem(_itmTracker ,[str(_tracker.id),str(_tracker.name),str(_tracker.filter.name)])
                         s_itm.setCheckState(0, Qt.Checked)
                         s_itm.setFlags(s_itm.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
                         _tracker.treeWidgetItem = s_itm
+
               
         def receiveSensors(self): 
          
@@ -1163,12 +1160,12 @@ class GIS(QWidget):
                     _track.displayTrack(self.axes,self.canvas,_tracker.displayTrackFig,_tracker.displayCovariancekFig,_tracker.displayIconeFig)
                 _tracker.mutex.unlock()    
         def receiveScan(self, scan = None):
-        
+
             #scan.sensor.clear()
             #print('in GIS receive Scan')
             scan.sensor.displayScan(self.axes,self.canvas)
            # self.canvas.blit(self.axes.bbox)
-            #self.canvas.draw_idle()
+            self.canvas.draw_idle()
             #self.canvas.flush_events()
             #self.canvas.draw()
             
@@ -1212,7 +1209,7 @@ class GIS(QWidget):
                        _itm.setFlags(_itm.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
                        
                        _node.setTreeWidget( _itm)
-                       
+                       _node.setGis(self)
                        self.itemNodes.addChild(_itm)
    
                        self.receiveSensors()

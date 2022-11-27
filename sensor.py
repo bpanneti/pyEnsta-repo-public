@@ -15,7 +15,7 @@ from point import Position,REFERENCE_POINT
 from orientation import Orientation 
 from mobileNode import MobileNode
 from matplotlib.patches import Circle
-
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtOpenGL import *
@@ -26,11 +26,18 @@ import myTimer as _timer
 from copy import deepcopy as deepCopy
 import random
 
+
 from os import path, listdir
 
 numberScan = 0
 nmberPlot  = 0
 numberSensor = 0
+
+def imscatter(x, y, imagePath, ax, zoom=0.1):
+    im = OffsetImage(plt.imread(imagePath), zoom=zoom)
+
+    ab = AnnotationBbox(im, (x, y), xycoords='data', frameon=False)
+    return ax.add_artist(ab)
 
 def is_integer_num(n):
  
@@ -69,7 +76,41 @@ def compte_sensor(val = None):
 
 
  
-
+def SER(_target):
+    
+    if _target == TARGET_TYPE.PAX :
+        mean = 0
+        std  = 2 
+    elif  _target == TARGET_TYPE.UNKNOWN :
+        mean = 0
+        std  = 40
+        
+    elif  _target == TARGET_TYPE.CAR :
+        mean = 20
+        std  = 5
+    elif  _target == TARGET_TYPE.DRONE :
+        mean = -10
+        std  = 8        
+    elif  _target == TARGET_TYPE.TANK :
+         mean = 33
+         std  = 4       
+    elif  _target == TARGET_TYPE.TRUCK :
+        mean = 23
+        std  = 2       
+    elif  _target == TARGET_TYPE.BIRD :
+        mean = -20
+        std  = 7   
+    elif  _target == TARGET_TYPE.VOILIER :
+        mean = 15
+        std  = 2  
+    elif  _target == TARGET_TYPE.TANKER :
+        mean = 30
+        std  = 2  
+    elif  _target == TARGET_TYPE.GOFAST :
+          mean = 7
+          std  = 5        
+    return np.random.normal(mean,std)    
+        
 class SensorMode(Enum):
     nomode          = 0
     radar           = 1
@@ -131,15 +172,15 @@ class SensorCoverage(object):
         self.name           = TARGET_TYPE.UNKNOWN
         self.id_Sensor      = -1
     
-class SensorBias(object):
-    def __init__(self, sensorId = -1, yaw = 0, x_ENU = 0, y_ENU = 0):
-        self.id = sensorId
-        self.position = Position()
-        self.orientation = Orientation()
+# class SensorBias(object):
+#     def __init__(self, sensorId = -1, yaw = 0, x_ENU = 0, y_ENU = 0):
+#         self.id = sensorId
+#         self.position = Position()
+#         self.orientation = Orientation()
     
-        self.position.setXYZ(x_ENU, y_ENU, 0, 'ENU')
-        self.position.ENU2WGS84();
-        self.orientation.setOrientation(yaw, 0, 0)
+#         self.position.setXYZ(x_ENU, y_ENU, 0, 'ENU')
+#         self.position.ENU2WGS84();
+#         self.orientation.setOrientation(yaw, 0, 0)
 
 class Node(object):
      message = pyqtSignal('QString');
@@ -152,8 +193,7 @@ class Node(object):
     
         elif is_integer_num(_id)== True:  
              compte_node(int(_id))
-             print('in nde')
-             print (compteur_sensor)
+ 
              self.id            = str(_id) # node id as string caracters
         else:      
  
@@ -174,12 +214,14 @@ class Node(object):
         self.name               = "NoName"           # node name
         self.sensors            = []                 # sensor object list                 
         self.tracker            = None               # object tracker  
-        self.biasCorrector      = None               # biaisCorrector item
+         
         
         self.axes               = None               # axes object
         self.canvas             = None               # canvas object
         self.selectedNode       = False              # node selection  
         self.treeWidgetItem     = None               #tree widget item reference  
+        
+        self.gis                = None
      
      def toJson(self ,ADRESS_IP = ''):
          adress = "192.168.1."+str(self.id)
@@ -271,14 +313,20 @@ class Node(object):
   
         self.nodeLocationEdit  = QTableWidget()
         self.nodeLocationEdit.setColumnCount(3) 
-        self.nodeLocationEdit.setHorizontalHeaderLabels(["longitude", "latitude","altitude"])
+        self.nodeLocationEdit.setHorizontalHeaderLabels(["longitude", "latitude","hauteur"])
 
 
+        hauteur = 0
+        
+        if self.gis!=None:
+            altitude_g = self.gis.elevation(self.Position.latitude,self.Position.longitude) 
+            hauteur    = self.Position.altitude - altitude_g
+            
         rowPosition = self.nodeLocationEdit.rowCount() ;
         self.nodeLocationEdit.insertRow(rowPosition)
         self.nodeLocationEdit.setItem(rowPosition , 0, QTableWidgetItem(str(self.Position.longitude)) )
         self.nodeLocationEdit.setItem(rowPosition , 1, QTableWidgetItem(str(self.Position.latitude)) ) 
-        self.nodeLocationEdit.setItem(rowPosition , 2, QTableWidgetItem(str(self.Position.altitude)) )
+        self.nodeLocationEdit.setItem(rowPosition , 2, QTableWidgetItem(str(hauteur)) )
         self.nodeLocationEdit.resizeColumnsToContents()
 #             
 #        for i in range(len(self.timeToWayPoints)):
@@ -354,7 +402,8 @@ class Node(object):
      def treeWidgetItem(self):
          return self.treeWidgetItem
      
-        
+     def setGis(self,_gis=None):
+         self.gis=_gis
      def setTreeWidget(self,item):
          self.treeWidgetItem = item
          self.update()
@@ -406,7 +455,14 @@ class Node(object):
             if is_float(self.nodeLocationEdit.item(0,1).text()):
                 latitude    = float(self.nodeLocationEdit.item(0,1).text())
             if is_float(self.nodeLocationEdit.item(0,2).text()):
-                altitude    = float(self.nodeLocationEdit.item(0,2).text())
+                
+                hauteur = float(self.nodeLocationEdit.item(0,2).text())
+                
+                if self.gis!=None:
+                    altitude_g = self.gis.elevation(self.Position.latitude,self.Position.longitude) 
+                    hauteur    = float(self.nodeLocationEdit.item(0,2).text()) + altitude_g
+                    
+                altitude    = hauteur
             
             self.Position.setWGS84(longitude,latitude,altitude)
                 
@@ -434,6 +490,7 @@ class Node(object):
         self.update()
         self.d.close()
 
+        self.toDisplay(self.axes,self.canvas)
      def clear(self,canvas,axes):
  
     
@@ -478,7 +535,7 @@ class Node(object):
     #==================
     
        if self.locObj !=None:
-            axes.lines.remove(self.locObj)
+            self.locObj.remove()
             self.locObj = None  
             
        self.locObj, =  axes.plot(longitude,latitude,color = self.color.name(), linewidth= 2, visible =self.locationIsVisible ) #
@@ -491,7 +548,7 @@ class Node(object):
             self.textObj.remove()
             self.textObj =None 
 
-       self.textObj = axes.text(longitude,latitude , 'node : '+ str(self.id),color = self.color.name(),  bbox={'facecolor':'cyan' ,'alpha':0.5, 'pad':10}, visible =self.locationIsVisible )
+       self.textObj = axes.text(longitude,latitude , 'node : '+ str(self.id)+'\n'+self.name,color = self.color.name(),  bbox={'facecolor':'cyan' ,'alpha':0.5, 'pad':10}, visible =self.locationIsVisible )
   
     #==================
     #objet quiver 
@@ -556,6 +613,7 @@ class Sensor(QWidget):
         self.plotsObj           = []                    #sensor detections graphic object
         self.coverAreaObj       = []                    #area of surveillance graphic object
         self.ellipsesObj        = []                    #detections covariance in location
+        self.iconeObj           = []                    #detections type icone
         self.textPlotsObj       = []
         self.locationIsVisible  = True                  #visible or not
         self.color              = QColor(Qt.blue)       # sensor color
@@ -563,17 +621,20 @@ class Sensor(QWidget):
         self.treeWidgetItem     = None                  # tree widget reference
         self.scan               = None                  #current scan
         self.lastScanTime       = QDateTime()           #last scan dateTime
-        self.bias               = SensorBias()     # bias of the sensor
+        #self.bias               = SensorBias()     # bias of the sensor
         self.position           = Position()            # unbiased position of the sensor
         self.orientation        = Orientation()         # unbiased orientation of the sensor
-        self.positionBiased     = Position()            # biased position of the sensor
-        self.orientationBiased  = Orientation()         # biased orientation of the sensor
+        #self.positionBiased     = Position()            # biased position of the sensor
+        #self.orientationBiased  = Orientation()         # biased orientation of the sensor
         self.randomSeeded       = np.random.RandomState(np.random.randint(100000))  # random use for this sensor scan
         self.realData           = False
         self.displayCumulated   = False
         self.displayCovariance  = False
+        self.displayIcone       = False
         self.GIS                = None
         
+        
+        self.targetTable        = []
         #==============================
         # intenralTracker
         #==============================
@@ -649,20 +710,20 @@ class Sensor(QWidget):
                 "state": "KO"\
                 }'
 
-        print(sensorType)
+     
         return json
     
-    def setupBiasEdit(self):
-        self.sensorBiasEdit = QTableWidget()
-        self.sensorBiasEdit.setColumnCount(3)
-        self.sensorBiasEdit.setHorizontalHeaderLabels(["Yaw (en °)", "Position x (en m)", "Position y (en m)"])
+    # def setupBiasEdit(self):
+    #     self.sensorBiasEdit = QTableWidget()
+    #     self.sensorBiasEdit.setColumnCount(3)
+    #     self.sensorBiasEdit.setHorizontalHeaderLabels(["Yaw (en °)", "Position x (en m)", "Position y (en m)"])
        
-        rowPosition = self.sensorBiasEdit.rowCount() 
-        self.sensorBiasEdit.insertRow(rowPosition)
-        self.sensorBiasEdit.setItem(rowPosition, 0, QTableWidgetItem(str(self.bias.orientation.yaw)))
-        self.sensorBiasEdit.setItem(rowPosition, 1, QTableWidgetItem(str(self.bias.position.x_ENU)))
-        self.sensorBiasEdit.setItem(rowPosition, 2, QTableWidgetItem(str(self.bias.position.y_ENU)))
-        self.sensorBiasEdit.resizeColumnsToContents()
+    #     rowPosition = self.sensorBiasEdit.rowCount() 
+    #     self.sensorBiasEdit.insertRow(rowPosition)
+    #     self.sensorBiasEdit.setItem(rowPosition, 0, QTableWidgetItem(str(self.bias.orientation.yaw)))
+    #     self.sensorBiasEdit.setItem(rowPosition, 1, QTableWidgetItem(str(self.bias.position.x_ENU)))
+    #     self.sensorBiasEdit.setItem(rowPosition, 2, QTableWidgetItem(str(self.bias.position.y_ENU)))
+    #     self.sensorBiasEdit.resizeColumnsToContents()
        
     def editSensor(self):
  
@@ -675,7 +736,7 @@ class Sensor(QWidget):
         sensorCoverage      = QLabel('Sensor coverage')
         sensorDisplayCum    = QLabel('Display cumulated reports')
         sensorIntTracker    = QLabel('Internal Tracker')
-        sensorBias          = QLabel('Sensor bias')
+        #sensorBias          = QLabel('Sensor bias')
         sensorTimeEdit      = QLabel('Time of sampling')
         sensorAsservMode    = QLabel('Sensor management mode')
         sensorAsservLoc     = QLabel('Sensor management location')
@@ -760,14 +821,20 @@ class Sensor(QWidget):
             
         self.checkBox_cov    = QCheckBox('display covariance')
         self.checkBox_cov.clicked.connect(self.displayCovarianceCheck)
-        
-        
         if self.displayCovariance:
             self.checkBox_cov.setCheckState(Qt.Checked)
         else:
-            self.checkBox_cov.setCheckState(Qt.Unchecked)
+            self.checkBox_cov.setCheckState(Qt.Unchecked) 
+            
+        self.checkBox_icone    = QCheckBox('display icone')
+        self.checkBox_icone.clicked.connect(self.displayIconeCheck)
+        if self.displayIcone:
+            self.checkBox_icone.setCheckState(Qt.Checked)
+        else:
+            self.checkBox_icone.setCheckState(Qt.Unchecked)      
+
         #Add bias
-        self.setupBiasEdit()
+        #self.setupBiasEdit()
         
         self.sensorAsserMode = QComboBox()
         for type_t in AsservissementMode :
@@ -833,9 +900,13 @@ class Sensor(QWidget):
         grid.addWidget(QLabel('display covariance'),9, 0)
         grid.addWidget(self.checkBox_cov,9, 1)
      
+        grid.addWidget(QLabel('display icone'),10, 0)
+        grid.addWidget(self.checkBox_icone,10, 1)
         
-        grid.addWidget(sensorBias, 10, 0)
-        grid.addWidget(self.sensorBiasEdit, 10, 1)
+
+        
+        # grid.addWidget(sensorBias, 10, 0)
+        # grid.addWidget(self.sensorBiasEdit, 10, 1)
         
         grid.addWidget(sensorAsservMode, 11, 0)
         grid.addWidget(self.sensorAsserMode, 11, 1)
@@ -875,6 +946,13 @@ class Sensor(QWidget):
            self.displayCovariance = True
          else : 
              self.displayCovariance = False
+    def displayIconeCheck(self):
+            
+             if self.checkBox_icone.isChecked():
+               self.displayIcone = True
+             else : 
+                 self.displayIcone = False
+                 
     def internatTracker(self):
          if self.checkBoxInternalTracker.isChecked():
            self.internalTracker = True
@@ -1014,15 +1092,15 @@ class Sensor(QWidget):
         yaw = 0
         x_ENU = 0
         y_ENU = 0
-
+        '''
         if self.sensorBiasEdit.item(0, 0) != None and is_float(self.sensorBiasEdit.item(0, 0).text()):
             yaw = float(self.sensorBiasEdit.item(0, 0).text())
         if self.sensorBiasEdit.item(0, 1) != None and is_float(self.sensorBiasEdit.item(0, 1).text()):
             x_ENU = float(self.sensorBiasEdit.item(0, 1).text())
         if self.sensorBiasEdit.item(0, 2) != None and is_float(self.sensorBiasEdit.item(0, 2).text()):
             y_ENU = float(self.sensorBiasEdit.item(0, 2).text())
-        
-        self.bias = SensorBias(self.id, yaw, x_ENU, y_ENU)
+        '''    
+        #self.bias = SensorBias(self.id, yaw, x_ENU, y_ENU)
 
         self.updateLocationOrientation()
 
@@ -1123,11 +1201,11 @@ class Sensor(QWidget):
         
         if flag :
             self.position = deepCopy(position)
-            self.positionBiased = self.position + self.bias.position
+            #self.positionBiased = self.position + self.bias.position
 
 
         self.orientation = deepCopy(orientation)
-        self.orientationBiased = self.orientation + self.bias.orientation
+        #self.orientationBiased = self.orientation + self.bias.orientation
 
     def setSensorType(self,_typeStr):
         
@@ -1156,8 +1234,8 @@ class Sensor(QWidget):
             
         self.updateLocationOrientation()
   
-        if self.positionBiased.latitude ==[] or self.positionBiased.longitude == []:
-            return
+        if self.position.latitude ==[] or self.position.longitude == []:
+           return
         
         self.axes   = axes 
         self.canvas = canvas           
@@ -1170,7 +1248,7 @@ class Sensor(QWidget):
             axes.lines.remove(self.trajObj)
             self.trajObj = None  
             
-        self.trajObj, = axes.plot(self.positionBiased.longitude,self.positionBiased.latitude,color = self.color.name() , linewidth= 2,visible =self.locationIsVisible ) 
+        self.trajObj, = axes.plot(self.position.longitude,self.position.latitude,color = self.color.name() , linewidth= 2,visible =self.locationIsVisible ) 
         
         
         #==================
@@ -1181,7 +1259,7 @@ class Sensor(QWidget):
             self.textObj.remove()
             self.textObj = None  
         
-        self.textObj  = axes.text(self.positionBiased.longitude,self.positionBiased.latitude , 'sensor : '+ str(self.id),   bbox={'facecolor':'white', 'alpha':0.5, 'pad':10},visible =self.locationIsVisible )
+        self.textObj  = axes.text(self.position.longitude,self.position.latitude , 'sensor : '+ str(self.id),   bbox={'facecolor':'white', 'alpha':0.5, 'pad':10},visible =self.locationIsVisible )
       
         if self.coverAreaObj != []:
             for u in self.coverAreaObj:
@@ -1195,10 +1273,10 @@ class Sensor(QWidget):
                     dmax = _cover.distanceMax
                     
                     pts =  Position()
-                    pts.setXYZ(self.positionBiased.x_UTM + dmax,self.positionBiased.y_UTM,0.0)
+                    pts.setXYZ(self.position.x_UTM + dmax,self.position.y_UTM,0.0)
                   
-                    ddegree = np.sqrt(np.power(pts.longitude-self.positionBiased.longitude,2.0)+np.power(pts.latitude-self.positionBiased.latitude ,2.0))
-                    _circle = Circle( [self.positionBiased.longitude,self.positionBiased.latitude], ddegree, ec="none")
+                    ddegree = np.sqrt(np.power(pts.longitude-self.position.longitude,2.0)+np.power(pts.latitude-self.position.latitude ,2.0))
+                    _circle = Circle( [self.position.longitude,self.position.latitude], ddegree, ec="none")
                 
                
                     self.coverAreaObj.append(_circle)
@@ -1209,7 +1287,7 @@ class Sensor(QWidget):
                     canvas.flush_events()
                     
                 if    _cover.type== FOVType.SECTOR  or _cover.type== FOVType.CONICAL :        
-                    if self.orientationBiased.yaw == None:
+                    if self.orientation.yaw == None:
                         self.message.emit(("Error the %s node's yaw is not defined")%self.node.name)
                         return
                     if _cover.fov == None:
@@ -1232,21 +1310,21 @@ class Sensor(QWidget):
                     #print(['node location:',Att.x,Att.y])
         
                    # _angle =  np.pi/2 - self.orientationBiased.yaw *np.pi/180 - _cover.fov/2.0*np.pi/180;# np.pi/2  - 
-                    _angle = np.mod(np.pi/2 - self.orientationBiased.yaw * np.pi/180  -  _cover.fov/2.0 * np.pi/180 + np.pi, 2*np.pi) - np.pi
+                    _angle = np.mod(np.pi/2 - self.orientation.yaw * np.pi/180  -  _cover.fov/2.0 * np.pi/180 + np.pi, 2*np.pi) - np.pi
                     verts = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])        
                   
-                    while _angle  < np.pi/2  - self.orientationBiased.yaw*np.pi/180  + _cover.fov/2*np.pi/180:
+                    while _angle  < np.pi/2  - self.orientation.yaw*np.pi/180  + _cover.fov/2*np.pi/180:
                         _angle = _angle + 2*np.pi/180
                         Pt = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])
                         verts = np.vstack([verts, Pt] )
              
-                    while _angle  > np.pi/2  - self.orientationBiased.yaw*np.pi/180  - _cover.fov/2*np.pi/180:
+                    while _angle  > np.pi/2  - self.orientation.yaw*np.pi/180  - _cover.fov/2*np.pi/180:
                         _angle = _angle - 2*np.pi/180
                         Pt = np.array([_cover.distanceMax*np.cos(_angle), _cover.distanceMax*np.sin(_angle)])
                         verts = np.vstack([verts, Pt] )
             
                     Pt = np.array([_cover.distanceMin*np.cos(_angle), _cover.distanceMin*np.sin(_angle)])       
-                    verts = np.vstack([verts, Pt] )    +[self.positionBiased.x_UTM,self.positionBiased.y_UTM]
+                    verts = np.vstack([verts, Pt] )    +[self.position.x_UTM,self.position.y_UTM]
                 
                     pathWGS84 = []
                     for u in verts:
@@ -1284,24 +1362,13 @@ class Sensor(QWidget):
         
         #on va définir un critère de classification fonction de la distance
         #approche bof mais bon 
-        probaClassif = 0.9
-        if self.mode == SensorMode.radar or self.mode == SensorMode.radar3D:
-           if targetType ==  TARGET_TYPE.TANK:
-              _string = 'vehicle'
-           elif targetType ==  TARGET_TYPE.TRUCK  :
-               _string = 'vehicle'
-           elif targetType ==  TARGET_TYPE.CAR  :
-                 _string ='light vehicle'
-           elif targetType ==  TARGET_TYPE.PAX  :
-                 _string ='personn'
-           elif targetType ==  TARGET_TYPE.DRONE  :
-                 _string ='drone'
-           else : 
-                 _string ='unknown'
-        else:
-            _string = targetType.value.correspondance
-        distance  = self.node.Position.distanceToPoint(truePosition)
-
+        probaClassif    = 0.95
+        if self.mode == SensorMode.radar or self.mode == SensorMode.radar3D :
+            probaClassif    = 0.7
+        probaClass      = np.zeros((len(TARGET_TYPE),1))
+        distance        = self.node.Position.distanceToPoint(truePosition)
+        classif         = targetType
+        
         Emprise = None
         for _cover in self.sensorCoverage:
             if _cover.name == targetType or \
@@ -1312,17 +1379,68 @@ class Sensor(QWidget):
             proba = max(0.6, 1-distance/Emprise.distanceMax)
         else:
             proba = probaClassif
+            
+            
         tir = np.random.uniform(0,1);
         
-    
-        if proba > tir:
-            return _string, proba
-        else:
-            classif = np.random.randint(0,len(TARGET_TYPE)-1)
+        if proba < tir:
+            proba   = tir
+            p = np.random.randint(0,len(TARGET_TYPE)-1)
             for _type in TARGET_TYPE:
-                if _type.value.value == classif: 
-               
-                    return _string,  proba
+                   if _type.value.value == p: 
+                      classif = _type
+            
+        if self.mode == SensorMode.radar or self.mode == SensorMode.radar3D :
+            c = np.random.uniform(0,1,size=(len(TARGET_TYPE),1))
+        
+            c[classif.value.value] = proba
+            probaClass = c/np.sum(c)
+            _string = classif.name
+
+        
+        elif self.mode == SensorMode.optroIR2D or self.mode == SensorMode.optroVIS or self.mode == SensorMode.optroIR :
+            c = np.random.uniform(0,1,size=(len(TARGET_TYPE),1))
+            c[lassif.value.value] = proba
+            probaClass = c/np.sum(c)
+            _string = classif.name
+        elif self.mode == SensorMode.gonio or self.mode == SensorMode.accoustic  :
+            c = np.random.uniform(0,1,size=(len(TARGET_TYPE),1))
+            c[classif.value.value] = proba
+            probaClass = c/np.sum(c)
+            _string = classif.name
+            
+           # if targetType ==  TARGET_TYPE.TANK:
+           #    _string = 'vehicle'
+           # elif targetType ==  TARGET_TYPE.TRUCK  :
+           #     _string = 'vehicle'
+           # elif targetType ==  TARGET_TYPE.CAR  :
+           #       _string ='light vehicle'
+           # elif targetType ==  TARGET_TYPE.PAX  :
+           #       _string ='personn'
+           # elif targetType ==  TARGET_TYPE.DRONE  :
+           #       _string ='drone'
+           # else : 
+           #       _string ='unknown'
+                 
+                 
+        else:
+             _string = targetType.value.correspondance
+            
+            
+
+
+       
+        
+    
+
+        return _string, probaClass
+        
+        # else:
+        #     classif = np.random.randint(0,len(TARGET_TYPE)-1)
+        #     for _type in TARGET_TYPE:
+        #         if _type.value.value == classif: 
+        #             _string = 
+        #             return _string,  proba
         
             
         
@@ -1370,21 +1488,21 @@ class Sensor(QWidget):
         
                             
  
-        _angle =  np.pi/2 - self.orientationBiased.yaw *np.pi/180 - Emprise.fov/2.0*np.pi/180;# np.pi/2  - 
+        _angle =  np.pi/2 - self.orientation.yaw *np.pi/180 - Emprise.fov/2.0*np.pi/180;# np.pi/2  - 
         verts = np.array([Emprise.distanceMin*np.cos(_angle), Emprise.distanceMin*np.sin(_angle)])        
                 
-        while _angle  < np.pi/2  - self.orientationBiased.yaw*np.pi/180  + Emprise.fov/2*np.pi/180:
+        while _angle  < np.pi/2  - self.orientation.yaw*np.pi/180  + Emprise.fov/2*np.pi/180:
             _angle = _angle + 2*np.pi/180
             Pt = np.array([Emprise.distanceMin*np.cos(_angle), Emprise.distanceMin*np.sin(_angle)])
             verts = np.vstack([verts, Pt] )
  
-        while _angle  > np.pi/2  - self.orientationBiased.yaw*np.pi/180  - Emprise.fov/2*np.pi/180:
+        while _angle  > np.pi/2  - self.orientation.yaw*np.pi/180  - Emprise.fov/2*np.pi/180:
             _angle = _angle - 2*np.pi/180
             Pt = np.array([Emprise.distanceMax*np.cos(_angle), Emprise.distanceMax*np.sin(_angle)])
             verts = np.vstack([verts, Pt] )
 
         Pt = np.array([Emprise.distanceMin*np.cos(_angle), Emprise.distanceMin*np.sin(_angle)])       
-        verts = np.vstack([verts, Pt] )    +[self.positionBiased.x_UTM,self.positionBiased.y_UTM]
+        verts = np.vstack([verts, Pt] )    +[self.position.x_UTM,self.position.y_UTM]
                 
  
         for u in verts:
@@ -1406,7 +1524,7 @@ class Sensor(QWidget):
 
         self.updateLocationOrientation()
          
-        sensorLoc   = np.array([self.positionBiased.x_ENU , self.positionBiased.y_ENU , self.positionBiased.altitude])
+        sensorLoc   = np.array([self.position.x_ENU , self.position.y_ENU , self.position.altitude])
         pt          = np.array([pos.x_ENU , pos.y_ENU,pos.altitude])
         distance    = np.sqrt(np.power(pt[0]-sensorLoc[0],2.0)+np.power(pt[1]-sensorLoc[1],2.0)+np.power(pt[2]-sensorLoc[2],2.0))#np.linalg.norm( sensorLoc - pt) 
         angle       = np.arctan2(pt[1] - sensorLoc[1] ,pt[0] - sensorLoc[0])*180/np.pi    
@@ -1431,7 +1549,7 @@ class Sensor(QWidget):
         if Emprise == None:
             return False
     
-        ecart = angle-self.orientationBiased.yaw
+        ecart = angle-self.orientation.yaw
  
         if ecart > 180 :
             ecart = 360 - ecart;
@@ -1449,23 +1567,29 @@ class Sensor(QWidget):
             return False
     def clearScanData(self,canvas,axes):
        if self.plotsObj and self.displayCumulated ==False:
+      
           for u in self.plotsObj:
-               axes.lines.remove(u)
+               u.remove()
+               #axes.lines.remove(u)
           self.plotsObj=[]
         
        for _e in self.ellipsesObj:
              _e.remove()
        self.ellipsesObj = [] 
        
+       for _e in self.iconeObj:
+             _e.remove()
+       self.iconeObj = [] 
+       
        for _e in self.textPlotsObj:
            _e.remove()
        self.textPlotsObj = [] 
                 
     def clearGrpahicalData(self,canvas,axes):
- 
+     
        if self.plotsObj:
           for u in self.plotsObj:
-               axes.lines.remove(u)
+               u.remove()
           self.plotsObj=[]
        
        if self.trajObj !=None:
@@ -1621,6 +1745,7 @@ class Sensor(QWidget):
                  self.axes.lines.remove(u)
  
         self.plotsObj= []
+
         self.scan = None
  
         
@@ -1628,14 +1753,18 @@ class Sensor(QWidget):
              for _e in self.ellipsesObj:
                  _e.remove()
              self.ellipsesObj = []
-             
+        
+        if self.iconeObj != []:
+                 for _e in self.iconeObj:
+                     _e.remove()
+                 self.iconeObj = []         
              
     def displayScan(self,axes = None, canvas = None):
         
          x = []
          y = []
          
-
+         
         #  if self.plotsObj != []:
         #     for u in self.plotsObj:
         #          self.axes.lines.remove(u)
@@ -1656,22 +1785,29 @@ class Sensor(QWidget):
          # display tracks internat track 
          #================================
          for _track in self.scan.tracks:
+
                if _track.type  == PLOTType.POLAR_TRACK or _track.type  == PLOTType.SPHERICAL_TRACK:
                    #display location
+                   
+
                    x.append(_track.Position.longitude) 
                    y.append(_track.Position.latitude)
         
                self.textPlotsObj.append(axes.text(_track.Position.longitude, _track.Position.latitude, 'track : ' + str(_track.id),  color=couleur.name() ))
          if x!=[] and y !=[]:
-            obj,  = axes.plot(x,y, marker='+', color=couleur.name(), ls=_linestyle )
+             
+ 
+            obj,  = axes.plot(x,y , marker='+', color=couleur.name(), ls=_linestyle )
             self.plotsObj.append(obj) 
             
          #================================
          # display tracks internat plot 
          #================================               
          x = []
-         y = []    
+         y = []
+     
          for _det in self.scan.plots:
+             
 #               print('------------------')
 #               print(_det.Classification)
 #               print(_det.ProbaClassification)
@@ -1684,9 +1820,10 @@ class Sensor(QWidget):
                    #display location
                    x.append(_det.Position.longitude) 
                    y.append(_det.Position.latitude)
-                   
+   
                    #display covariances
                    #attention with et height en m à conevertir en wgs84
+            
                    if self.displayCovariance:
             
                        pos = Position()
@@ -1700,7 +1837,25 @@ class Sensor(QWidget):
                        self.axes.add_patch(e1) 
                        
                        self.ellipsesObj.append(e1)
-                   _linestyle='' 
+                   _linestyle=''
+                   
+                   
+                   # =============================
+                   # display image
+                   # =============================
+                   if self.displayIcone:
+                       icone = 'icones_target/unknown.png'
+                       for _t in TARGET_TYPE:
+
+                           if _t.name == _det.Classification:
+                               icone = _t.value.icone
+                               print(icone)
+                               break
+                           
+                       self.iconeObj.append(imscatter(_det.Position.longitude, _det.Position.latitude, icone, self.axes))
+                       
+                       
+              
                if self.node!=None and (_det.type  == PLOTType.ANGULAR or _det.type  == PLOTType.ANGULAR2D) :
           
                     Emprise = None
@@ -1727,18 +1882,23 @@ class Sensor(QWidget):
                     self.plotsObj.append(obj)
                     #axes.draw_artist(obj) 
 
-   
+         
          
             #plotsObj, = self.axes.scatter(box_coords, marker='o', c='r', edgecolor='b')
             #plotsObj,  = self.axes.plot(self.Position[0].longitude + distance *np.cos(an),self.Position[0].latitude + distance *np.sin(an) ,color=couleur.name()) 
             #self.axes.plot(box_coords,color=couleur.name())
+            
          if x!=[] and y !=[]:
+         
+   
+            #axes.scatter(x,y)
             obj,  = axes.plot(x,y, marker='o', color=couleur.name(), ls=_linestyle )
             self.plotsObj.append(obj)
-        
-           # axes.draw_artist(obj )
-           # self.canvas.draw_idle()
-#         canvas.blit( axes.bbox)
+
+            axes.draw_artist(obj )
+           # 
+            canvas.blit( axes.bbox)
+            #canvas.draw_idle()
 #         canvas.update()
 #         canvas.flush_events()  
     
@@ -1795,12 +1955,14 @@ class Sensor(QWidget):
     def run(self):
   
            if self.currentTime!=None:
-                 if self.mutex.tryLock() :
+                 #if self.mutex.tryLock() :
                      self.detection(self.currentTime)
                      self.currentTime = None
-                     self.mutex.unlock()
+                     #self.mutex.unlock()
             
     def receiveTime(self,currentTime):
+    
+    
         self.currentTime = currentTime
         self.run()
    
@@ -1811,6 +1973,7 @@ class Sensor(QWidget):
     
    
     def detection(self,currentTime):
+     
         if self.realData:
             if self.scan !=None:
                 self.newScan.emit(self.scan)
@@ -1823,20 +1986,20 @@ class Sensor(QWidget):
         
         
         flagCycle = False
- 
+
         if self.scan !=None:
             self.lastScanTime = self.scan.dateTime
             del self.scan
             self.scan=None
-        #print(currentTime.toString("hh:mm:ss.z"))
-        #print(self.lastScanTime.msecsTo(currentTime)*0.001 )   
- 
+        # print(currentTime.toString("hh:mm:ss.z"))
+        # print(self.lastScanTime.toString("hh:mm:ss.z"))   
+        # print(self.lastScanTime.msecsTo(currentTime)*0.001 ) 
         if self.lastScanTime.msecsTo(currentTime)*0.001 >=self.timeOfSampling:
                 #print(self.lastScanTime.msecsTo(currentTime)*0.001 ) 
                 #print(['sensor id: ', str(self.id),' ',str(self.lastScanTime.msecsTo(currentTime)*0.001) , ' : time of sammp : ' , str(self.timeOfSampling)])
                 flagCycle = True
     
-          
+  
         if flagCycle == False:
             return
        
@@ -1847,10 +2010,10 @@ class Sensor(QWidget):
             self.setScanTrackType(_scan)
         
         self.updateLocationOrientation()
-
+        _scan.sensor = self
         _scan.sensorPosition = self.position
         _scan.sensorOrientation = self.orientation
-            
+   
         volumeMax   = 0
         pfa         = 0
         pd          = 0
@@ -1873,22 +2036,37 @@ class Sensor(QWidget):
             flag, PositionAtTime,velocity = _target.positionAtTime( currentTime)
             #if flag :
                 
-                #↓print('in sensor detection : '+str(currentTime.toString('hh:mm:ss.z')) +' position : {0}, {1}'.format(PositionAtTime.and self.isDetectable(PositionAtTime,_target.altitude) x_ENU,PositionAtTime.y_ENU) )
+            #print('in sensor detection : '+str(currentTime.toString('hh:mm:ss.z')) +' position : {0}, {1}'.format(PositionAtTime.and self.isDetectable(PositionAtTime,_target.altitude) x_ENU,PositionAtTime.y_ENU) )
    
             if flag and self.isInFOV(PositionAtTime,_target.type,currentTime)   and random.uniform(0, 1) <pd: #and self.isDetectable(PositionAtTime,_target.altitude) 
+             
                 _class, _ProbaClass = self.sensorClassification(_target.type,PositionAtTime)
                 _url                = self.sensorURL(_target.type )
                 gabarit             =   _target.type.value.gabarit
-                surface_target      = gabarit[0]*gabarit[1] + np.random.randn(1)[0]
+                surface_target      = gabarit[0]*gabarit[1]*gabarit[2]  + np.random.randn(1)[0]
+                _ser                = SER(_target.type)
+                if self.mode == SensorMode.radar or  self.mode == SensorMode.radar3D:
+                    infos               = np.array([['target size',surface_target],['SER',_ser]])
+                else : 
+                    infos               = np.array(['target size',surface_target] )
+                
                 if self.internalTracker==False:
-                    _scan.addPlot(PositionAtTime,_target.id,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
+                    _scan.addPlot(PositionAtTime,_target.id,_target.type.name,currentTime,_class, _ProbaClass,infos,_url)
                 else:
-                    _idTrack = self.targetTable[_target.id][0]
-                    _scan.addTrack(PositionAtTime,_target.id,self.targetTable[str(_target.id)] ,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
-            else  :
-                  if self.internalTracker:
-                   self.numTrack +=1
-                   self.targetTable[str(_target.id)] = self.numTrack 
+                    _idTrack = -1;
+                    for _li in self.targetTable :
+                        if str(_target.id) in _li:
+                            _idTrack = _li[1]
+                    if _idTrack==-1:
+                        self.numTrack +=1
+                        self.targetTable.append([str(_target.id), self.numTrack]) 
+                        _idTrack = self.numTrack
+                        
+                    _scan.addTrack(PositionAtTime,velocity, _idTrack,_target.type.name,currentTime,_class, _ProbaClass,np.array(['target size',surface_target]),_url)
+#            else  :
+#                  if self.internalTracker:
+#                   self.numTrack +=1
+#                   self.targetTable.append([str(_target.id), self.numTrack]) 
         #=============================
         # génération des fausses alarmes
         #=============================   
@@ -1912,26 +2090,38 @@ class Sensor(QWidget):
         if _coverMax!=None and m_fa> 0 and m_fa <=50:
           [rho_fa,theta_fa,phi_fa]      = [np.random.uniform(_coverMax.distanceMax,_coverMax.distanceMin,m_fa),np.random.uniform(-_coverMax.fov/2*np.pi/180,_coverMax.fov/2*np.pi/180,m_fa), np.random.uniform(-_coverMax.fov_elevation/2*np.pi/180,_coverMax.fov_elevation/2*np.pi/180,m_fa)]  
           _intclasses                   = np.random.randint(0,len(TARGET_TYPE)-1,m_fa)
-          _probas                       = np.random.uniform(0,1,m_fa)
+          _probas                       = np.random.uniform(0,1,size=(len(TARGET_TYPE),m_fa))
+          
           infos                         = []
+          infosSER                      = []
           _classes                      = []
+     
           for u in range(0,m_fa):
               for ku,_type in enumerate(TARGET_TYPE):
                   if ku == _intclasses[u]:
                       TT        = _type
+               
                       break
                   
-              _classes.append(TT)
+              _classes.append(TT.name)
+              
               gabarit             =   TT.value.gabarit
-              infos.append(np.array(['target size', gabarit[0]*gabarit[1] + np.random.randn(1)[0]]))
-          
+              
+         
+              if self.mode == SensorMode.radar or  self.mode == SensorMode.radar3D:
+                  infos.append([['target size', gabarit[0]*gabarit[1]*gabarit[2] + np.random.randn(1)[0]],['SER',SER(TT)]])
+              else:
+                  infos.append(['target size', gabarit[0]*gabarit[1]*gabarit[2] + np.random.randn(1)[0]])
+      
           if self.internalTracker==False:
               _scan.addFa([rho_fa,theta_fa,phi_fa],currentTime,_classes,_probas,infos);        
           else :
               _scan.addFalseTrack([rho_fa,theta_fa,phi_fa],currentTime,_classes,_probas,infos);
               
         self.scan = _scan
-        self.newScan.emit(_scan)
+        
+        if self.scan.tracks!=[] or self.scan.plots!=[]:
+            self.newScan.emit(_scan)
         
     def drawAllDetections(self):
          sensorLoc   = np.array([self.location]) 

@@ -12,11 +12,16 @@ from numpy import meshgrid
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.mlab as ml
-
-class dted:
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+class dted(QWidget):
+ 
+       
     def __init__(self):
+        super(dted, self).__init__() 
         self.nom = []
-        self.layer = []
+        self.layer = None
         
     def map2pixel(self,mx,my):
         #print('lol')
@@ -73,15 +78,16 @@ class dted:
         return val
          
     def set_visible(self,_bool):
-        
+   
         self.layer.set_visible(_bool)
         
     def display(self,axes):
         A = self.dem
         A[A>255] = 255
         A[A<0] = 0
-        
-        self.layer = axes.imshow(self.dem, cmap='gist_earth', extent=[self.x0, self.x1, self.y1, self.y0])
+ 
+        if self.layer==None:
+            self.layer = axes.imshow(self.dem, cmap='gist_earth', extent=[self.x0, self.x1, self.y1, self.y0])
 
 def main(argv=None):
      print("file")

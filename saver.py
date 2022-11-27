@@ -20,12 +20,11 @@ import myTimer as _timer
 from point import REFERENCE_POINT
 from Managers.dataManager import DataManager as dataManager
 #from tool_tracking.track import Track
-from tool_tracking.state import State
+from toolTracking.state import State
 from target import TARGET_TYPE, RECORDED_TYPE
 from mobileNode import MobileNode
 from sensor     import Node
-from tool_tracking.BiasProcessing.saver import icpTable as It, roadLmsTable as Rlt
-import tool_tracking as tr
+ 
 
 def adapt_array(arr):
     out = io.BytesIO()
@@ -122,13 +121,30 @@ class saveData(QWidget):
          self.connp.close()
          self.connp = None
 
+
+     def cleanTableParameters(self):
+         self.executeRequest(self.conn,'DELETE FROM parameters_t;')
+ 
+     def cleanTableReferencePoint(self):       
+         self.executeRequest(self.conn,'DELETE FROM referencePoint_t;')
+         
+     def cleanTableSensors(self):
+          self.executeRequest(self.conn,'DELETE FROM sensor_t;')
+  
+     def cleanTableNodes(self):       
+          self.executeRequest(self.conn,'DELETE FROM node_t;')   
+     def cleanTableTrackers(self):
+          self.executeRequest(self.conn,'DELETE FROM tracker_t;')
+     def cleanTableClasses(self):       
+          self.executeRequest(self.conn,'DELETE FROM class_t;')   
+     def cleanTableTargets(self):
+          self.executeRequest(self.conn,'DELETE FROM groundTrue_t;') 
      def createTables(self):
          #------------------
          #table référence
          #------------------
 
          self.executeRequest(self.conn,'DROP TABLE referencePoint_t')
-         
          Command = []
          Command.append('CREATE TABLE referencePoint_t (');
          Command.append('date STRING,');
@@ -237,27 +253,9 @@ class saveData(QWidget):
          Command = ''.join(Command)
          self.executeRequest(self.conn,Command)
 
-         #---------------------
-         #table bias corrector
-         #---------------------
+ 
 
-         It.IcpTable.createTable(self.conn)
-         Rlt.RoadLmsTable.createTables(self.conn)
-
-         #------------------
-         #table bias
-         #------------------
-         self.executeRequest(self.conn,'DROP TABLE bias_t')
-         Command = []
-         Command.append("CREATE TABLE bias_t ");
-         Command.append("(id INTEGER PRIMARY KEY AUTOINCREMENT,");
-         Command.append(" id_sensor     VARCHAR,");
-         Command.append(" yaw         REAL,");
-         Command.append(" x_ENU       REAL,");
-         Command.append(" y_ENU       REAL ");
-         Command.append(");");
-         Command = ''.join(Command)
-         self.executeRequest(self.conn,Command)
+ 
          #------------------
          #table ground true
          #------------------         
@@ -401,9 +399,69 @@ class saveData(QWidget):
             return conn
         except Error as e:
             self.message.emit(e)
-        return None    
-     def saveReference(self,latitide,longitude,altitude,_time):
+        return None 
+    
+     def receiveScan(self,scan):
          
+         for _plot in scan.plots:
+             Command = []
+             Command.append("insert into plot_t ");
+     
+             
+             Command.append(" (id_Plot,id_Sensor, id_Scan, date,receptionDate, locationFormat,locComposant_1,locComposant_2,locComposant_3,locSTDType_1,locSTDType_2,locSTDType_3,"\
+                            +"velocityFormat,velocityComposant_1,velocityComposant_2,velocityComposant_3,Pfa,Pd,classe,likelyhood_classe,url,dataType_1,data_1,dataType_2,data_2) values(");
+             
+             
+             Command.append(("%d,")%(_plot.id));
+             Command.append(("\"%s\",")%(_plot.idSensor));
+             Command.append(("%d,")%(_plot.idScan));
+             Command.append(("\"%s\",")%( _plot.dateTime.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+             Command.append(("\"%s\",")%( _plot.dateTime.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+             Command.append(("\"%s\",")%( _plot.type.name));
+             
+             if  _plot.rho!=0.0:
+                 Command.append(("%s,")%( _plot.rho));
+             else :
+                 Command.append("\"\",");
+            
+             if  _plot.theta!=0.0:
+                 Command.append(("%s,")%( _plot.theta));
+             else :
+                 Command.append("\"\",");
+            
+             if  _plot.phi!=0.0:
+                 Command.append(("%s,")%( _plot.phi));
+             else :
+                 Command.append("\"\",");       
+             
+             Command.append(("%s,")%( _plot.sigma_rho));
+             Command.append(("%s,")%( _plot.sigma_theta));
+             Command.append(("%s,")%( _plot.sigma_phi));
+             
+             Command.append("\"UNKNOWN\",");     
+             Command.append("\"\","); 
+             Command.append("\"\","); 
+             Command.append("\"\","); 
+             Command.append(("%s,")%( _plot.pfa));
+             Command.append(("%s,")%( _plot.pd));
+             Command.append(("\"%s\",")%( _plot.Classification));
+             Llassification='"{'
+             for _c in _plot.ProbaClassification:
+                 Llassification+='{},'.format(str(_c))
+             Llassification = Llassification[:-1]    
+             Llassification+='}"'    
+             Command.append(("%s,")%( Llassification));
+             Command.append(("\"%s\",")%( _plot.url));
+             Command.append(("\"%s\",")%( _plot.info_1));
+             Command.append(("%s,")%( _plot.value_info_1));
+             Command.append(("\"%s\",")%( _plot.info_2));
+             Command.append(("%s")%( _plot.value_info_2));
+             Command.append(");");
+             Command = ''.join(Command)
+       
+             self.executeRequest(self.conn,Command)
+     def saveReference(self,latitide,longitude,altitude,_time):
+   
         Command = []
         Command.append("insert into referencePoint_t ");
         Command.append(" (date,longitude, latitude, altitude, type) values(");
@@ -424,7 +482,7 @@ class saveData(QWidget):
 
         if REFERENCE_POINT.longitude ==[]  or REFERENCE_POINT.latitude==[] or REFERENCE_TIME == None:
             return
-
+      
         Command = []
         Command.append("insert into referencePoint_t ");
         Command.append(" (date,longitude, latitude, altitude, type) values(");
@@ -499,7 +557,7 @@ class saveData(QWidget):
             Command.append("'{");
             for _im in _gis.maps:
                 Command.append(("%s,")%(_im.nom))
-            if  len(_gis.maps)>=1:
+            if  len(_gis.maps)>1:
                      Command = Command[:-2]
                      Command.append(("%s")%(_im.nom))
             Command.append("}');");
@@ -508,18 +566,20 @@ class saveData(QWidget):
            # print('images saved')
         #dted
         if _gis.dtedList:
+    
             Command = []
             Command.append("insert into gis_t ");
             Command.append(" (nature,path) values(");
             Command.append("'dted',");
             Command.append("'{");
-            for _dted in _gis.dtedList:
+            for _dted in _gis.dtedList:                
                 Command.append(("%s,")%(_dted.nom))
-            if  len(_gis.dtedList)>=1:
+            if  len(_gis.dtedList)>1:
                      Command = Command[:-2]
                      Command.append(("%s")%(_dted.nom))
             Command.append("}');");
             Command = ''.join(Command)
+  
             self.executeRequest(self.conn,Command)
            # print('dted saved')
         if _gis.x0!=None and _gis.y0!=None and _gis.y1!=None and _gis.x1!=None:
@@ -538,6 +598,7 @@ class saveData(QWidget):
             #print('area saved')
         #pr#int('gis saved')
      def saveClass(self):
+ 
         for type_t in TARGET_TYPE: 
             Command = []
             Command.append("insert into class_t (class) values (");
@@ -553,7 +614,7 @@ class saveData(QWidget):
              return
          
          REFERENCE_TIME = _timer.getReferenceTime() 
-
+ 
          Command = ["insert into  parameters_t (id_sensor, date,coverageType,classType, Component_1,Component_2,Component_3,Component_4,FaProbability,DetectionProbability,sigma_rho,sigma_theta,sigma_phi)"]
          Command.append(" values (?,?,?,?,?,?,?,?,?,?,?,?,?);")
          Command = "".join(Command)
@@ -579,35 +640,21 @@ class saveData(QWidget):
          self.executeManyRequests(self.conn,Command,Rows)
          #print('parameter saved')
 
-     def saveBias(self, bias):
-         if bias == None :
-             return
-         
-         Command = []
-         Command.append("insert into bias_t (id_sensor, yaw, x_ENU, y_ENU)")
-         Command.append(" values (" )
-         Command.append(("'%s',")%(bias.id))
-         Command.append(("'%s',")%(bias.orientation.yaw))
-         Command.append(("'%s',")%(bias.position.x_ENU))
-         Command.append(("'%s'")%(bias.position.y_ENU))
-         Command.append(");")
-         Command = ''.join(Command)
-
-         self.executeRequest(self.conn,Command)
-         #print('Bias saved')
+      
 
      def saveTrackers(self,_tracker  ):
  
          if _tracker==None :
              return
  
+  
          REFERENCE_TIME = _timer.getReferenceTime() 
          Command = []
          Command.append("insert into  tracker_t (id_tracker, id_node, type, name, targets, sensors, particlesNumber, threshold)");
          Command.append(" values (" );
          Command.append(("'%s',")%(_tracker.id));
          Command.append(("'%s',")%(_tracker.id_node));
-         Command.append(("'%s',")%(_tracker.filter.name));
+         Command.append(("'%s',")%(_tracker.filter.value.name));
          Command.append(("'%s',")%(_tracker.name));
          Command.append("'{");
          
@@ -651,7 +698,7 @@ class saveData(QWidget):
          
          if len(_sensors)<=0 :
              return
-         
+   
          REFERENCE_TIME = _timer.getReferenceTime() 
          for _sensor in _sensors:
              Command = []
@@ -671,7 +718,7 @@ class saveData(QWidget):
              self.executeRequest(self.conn,Command)
 
              self.saveParameters(_sensor.sensorCoverage)
-             self.saveBias(_sensor.bias)
+ 
              
      def saveStates(self, _state,_idTrack,_idNode ): 
   
@@ -759,16 +806,16 @@ class saveData(QWidget):
                  first = True
                  while _cState != None:
                      Command  = []
-                     self.saveStates(_cState.data,_track.id,_track.id_node)
+                     self.saveStates(_cState,_track.id,_track.id_node)
                      if first==True:
                          Command.append("insert into track_t");
                          Command.append(" (id_node,id_track, date_creation, date_end, last_states,  statut, classe, probability_classe,additionalInfo_1,additionalValue_1) values(");
                          Command.append(("'%s',")%(_track.id_node));
                          Command.append( ("%s,")%(_track.id));
-                         Command.append( ("'%s',")%(_track.tree.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
-                         Command.append( ("'%s',")%(_cState.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+                         Command.append( ("'%s',")%(_track.tree.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
+                         Command.append( ("'%s',")%(_cState.time.toString("yyyy-MM-dd hh:mm:ss.zzz")));
                          Command.append( " '{");
-                         Command.append(("%s}',")%( _cState.data.id ));
+                         Command.append(("%s}',")%( _cState.id ));
                          Command.append("'CONFIRMED',");
                          Command.append("'UNKNOWN',");
                          Command.append("1.0,");
@@ -785,13 +832,13 @@ class saveData(QWidget):
                          Command.append("UPDATE track_t ");
                          Command.append("SET  last_states=");
                          Command.append( " '{");
-                         Command.append(("%s")%( _cState.data.id ))
+                         Command.append(("%s")%( _cState.id ))
                          Command.append("}',");
                          Command.append("date_end=");
-                         Command.append( ("'%s' ")%(_cState.data.time.toString("yyyy-MM-dd hh:mm:ss.zzz")))
+                         Command.append( ("'%s' ")%(_cState.time.toString("yyyy-MM-dd hh:mm:ss.zzz")))
                          Command.append((" WHERE id_track = %s;")%(_track.id));
                          
-                     _cState = _track.getState(_cState.data.idPere)
+                     _cState = _track.getState(_cState.idPere)
                      
                      Command = ''.join(Command)
              
@@ -865,17 +912,18 @@ class saveData(QWidget):
                      
                      
                  Command = ''.join(Command)
-   
+                 currentStates.clear()
                  self.executeRequest(self.conn,Command)
              _tracker.mutex.unlock()
          self.conn.commit()
          
        
      def saveTargets(self ):
+  
          for _target in dataManager.instance().targets():
              if _target.isValid()==False:
                  continue
- 
+             
              Command = []
              Command.append("insert into groundTrue_t (");
              Command.append(" id_target, name, type,  date, isRandomVelocity, isSplinTrajectory, latitude, longitude, altitude,velocity)");
@@ -883,7 +931,7 @@ class saveData(QWidget):
              Command = ''.join(Command)
              
              ValueRows = []
-
+             print('save target %0'.format(_target.id))
              for i in range(0,len(_target.trajectoryWayPoints)):
                  
                  row = []
@@ -911,11 +959,7 @@ class saveData(QWidget):
 
              #print('target saved')
 
-     def saveBiasCorretors(self, biasCorrector):
-         if biasCorrector == None:
-             return
-
-         biasCorrector.save(self.executeRequest, self.conn)
+ 
      def saveAllNodes(self,_nodes=[]):
          for _node in _nodes:
             Command = []
@@ -1007,11 +1051,13 @@ class saveData(QWidget):
             self.saveTrackers(_node.tracker)
 
           
-
-            self.saveBiasCorretors(_node.biasCorrector)
+ 
          
      def saveNodes(self,_currentTime = QDateTime()):
          REFERENCE_TIME = _timer.getReferenceTime()
+         
+     
+         
          for _node in dataManager.instance().nodes():
             Command = []
             Command.append("insert into  node_t "
@@ -1102,5 +1148,4 @@ class saveData(QWidget):
             self.saveTrackers(_node.tracker)
 
           
-
-            self.saveBiasCorretors(_node.biasCorrector)
+ 

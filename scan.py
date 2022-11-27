@@ -11,9 +11,9 @@ from PyQt5.QtWidgets import *
 from enum import Enum, unique
 from target import TARGET_TYPE
 import numpy as np
+import json as jsonClass
 
-
-from point import Position
+from point import Position, Velocity, REFERENCE_POINT
 numberScan = -1
 nmberPlot  = -1
 global numberTrack        
@@ -51,6 +51,7 @@ class State(object):
         self.doppler        = 0
         self.sigma_doppler  = 0
         self.id             = numberTrack
+ 
         self.type           = PLOTType.NOTYPE
         self.idTarget       = -1
         self.Classification = "UNKNOWN"
@@ -60,14 +61,23 @@ class State(object):
         self.z              = np.zeros((2,1))
         self.R_XY           = np.zeros((2,2))
         self.z_XY           = np.zeros((2,1))
+        self.Location       = np.zeros((3,1))#position dans le repère capteur 
+        self.Velocity       = np.zeros((3,1))#vitesse dans le repère capteur
         self.width          = 0 #largeur de l'ellipse d'incertitude
         self.height         = 0 #hauteur de l'ellipse d'incertitude
         self.angle          = 0 #orientation de l'ellipse d'incertitude dans le sens anti horaire en degré
      
-        
-    def updateLocation(self,  _scan ):
 
-            if self.type == PLOTType.SPHERICAL and _scan.sensorOrientation!=None:
+    def jsonCov(self)    :
+        jsonCov = ''
+        for i in range(0, self.R_XY.shape[0] ):
+          for j in range(0, self.R_XY.shape[0]): 
+            jsonCov+=  str(self.R_XY[i][j])+','
+        jsonCov = jsonCov[:-1]     
+        return jsonCov
+    def updateLocation(self,  _scan ):
+ 
+            if self.type == PLOTType.SPHERICAL_TRACK and _scan.sensorOrientation!=None:
                 self.R              = np.zeros((3,3))
                 self.z              = np.zeros((3,1))
                 self.R_XY           = np.zeros((3,3))
@@ -81,15 +91,15 @@ class State(object):
                 
                 #converted measurement
                 azimut              = np.pi/2 -  (_scan.sensorOrientation.yaw  + self.theta)   *np.pi/180
-                site                = self.phi #* np.pi/180
+                site                = self.phi * np.pi/180
                 
-                sensorLoc           =    np.array([_scan.sensorPosition.x_ENU, _scan.sensorPosition.y_ENU]) 
+                sensorLoc           =    np.array([[_scan.sensorPosition.x_ENU], [_scan.sensorPosition.y_ENU], [_scan.sensorPosition.z_ENU]]) 
                 m_ec_azimut         =    self.sigma_theta * np.pi/180
                 m_ec_site           =    self.sigma_phi * np.pi/180
                 
                 self.z_XY[0] = self.rho*np.cos(azimut)*np.cos(site) - self.rho*np.cos(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[0];
                 self.z_XY[1] = self.rho*np.sin(azimut)*np.cos(site) - self.rho*np.sin(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[1];
-                self.z_XY[2] = self.rho*np.sin(site) - self.rho*np.sin(site)*(1 -  np.exp(1/2*(-pow(m_ec_site,2.0))))  ;
+                self.z_XY[2] = self.rho*np.sin(site) - self.rho*np.sin(site)*(1 -  np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[2] ;
     
              
                 Alpha_x = pow(np.sin(azimut),2.0)*np.sinh( pow(m_ec_azimut,2.0)) + pow(np.cos(azimut),2.0)*np.cosh(pow(m_ec_azimut,2.0));
@@ -116,13 +126,16 @@ class State(object):
                 
                 
                 self.Position.setXYZ( float(self.z_XY[0]),float(self.z_XY[1]),float(self.z_XY[2]),'ENU')
-                  
+ 
                 V,D = np.linalg.eig(self.R_XY)
                 self.width  =  np.sqrt(V[0])
                 self.height =  np.sqrt(V[1])
                 self.angle  =  np.arccos(D[0,0])*180/np.pi
+        
+                self.Location       =  self.z_XY 
+   
                 
-            if self.type == PLOTType.POLAR and _scan.sensorOrientation!=None: 
+            if self.type == PLOTType.POLAR_TRACK and _scan.sensorOrientation!=None: 
        
                 self.z[0]       = self.rho
                 self.z[1]       = self.theta
@@ -130,40 +143,42 @@ class State(object):
                 self.R[1,1]     = self.sigma_theta*self.sigma_theta
 
  
-            angleTrigo          =    np.pi/2 -  (_scan.sensor.orientationBiased.yaw  + self.theta)   *np.pi/180 
-            sensorLoc           =    np.array([_scan.sensor.positionBiased.x_ENU, _scan.sensor.positionBiased.y_ENU]) 
-            sigma_thetaTrigo    =    self.sigma_theta * np.pi/180   
-            
-            self.z_XY[0]        = sensorLoc[0] + self.rho*np.cos(angleTrigo)*(1+( 1-np.exp(-0.5* sigma_thetaTrigo*sigma_thetaTrigo))) # -   self.rho*np.cos(angleTrigo) - np.exp(- 0.5* sigma_thetaTrigo*sigma_thetaTrigo)) 
-            self.z_XY[1]        = sensorLoc[1] + self.rho*np.sin(angleTrigo)*(1+( 1-np.exp(-0.5* sigma_thetaTrigo*sigma_thetaTrigo))) # -   self.rho*np.sin(angleTrigo) *( np.exp(- sigma_thetaTrigo*sigma_thetaTrigo))# - np.exp(- 0.5* sigma_thetaTrigo*sigma_thetaTrigo)) 
-           
-            
-            self.R_XY[0,0]  =  - pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * pow(np.cos(angleTrigo),2.0) +0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0)) \
-            *                   (1 + np.cos(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
+                angleTrigo          =    np.pi/2 -  (_scan.sensor.orientation.yaw  + self.theta)   *np.pi/180 
+                sensorLoc           =    np.array([_scan.sensor.position.x_ENU, _scan.sensor.position.y_ENU]) 
+                sigma_thetaTrigo    =    self.sigma_theta * np.pi/180   
+                
+                self.z_XY[0]        = sensorLoc[0] + self.rho*np.cos(angleTrigo)*(1+( 1-np.exp(-0.5* sigma_thetaTrigo*sigma_thetaTrigo))) # -   self.rho*np.cos(angleTrigo) - np.exp(- 0.5* sigma_thetaTrigo*sigma_thetaTrigo)) 
+                self.z_XY[1]        = sensorLoc[1] + self.rho*np.sin(angleTrigo)*(1+( 1-np.exp(-0.5* sigma_thetaTrigo*sigma_thetaTrigo))) # -   self.rho*np.sin(angleTrigo) *( np.exp(- sigma_thetaTrigo*sigma_thetaTrigo))# - np.exp(- 0.5* sigma_thetaTrigo*sigma_thetaTrigo)) 
+               
+                
+                self.R_XY[0,0]  =  - pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * pow(np.cos(angleTrigo),2.0) +0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0)) \
+                *                   (1 + np.cos(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
+        
+        
+                self.R_XY[1,1]  = - pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * pow(np.sin(angleTrigo),2.0)+0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0))\
+                *                   (1 - np.cos(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
     
     
-            self.R_XY[1,1]  = - pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * pow(np.sin(angleTrigo),2.0)+0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0))\
-            *                   (1 - np.cos(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
-
-
-            self.R_XY[1,0]  =- pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * np.cos(angleTrigo)* np.sin(angleTrigo) + 0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0))\
-            *                  (np.sin(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
-            
-             
-      
-    
-            self.R_XY[0,1]      = self.R_XY[1,0]           
-            
-            self.Position.setXYZ( float(self.z_XY[0]),float(self.z_XY[1]),0.0,'ENU')
-             
-            V,D = np.linalg.eig(self.R_XY)
-            a = 0
-            if V[0]<V[1]:
-                a = 1
-            self.width  =  2*np.sqrt(np.abs(5.991*V[0]))
-            self.height =  2*np.sqrt(np.abs(5.991*V[1]))       
-            self.angle  =  np.arctan2(D[1,a],D[0,a])*180/np.pi
-            
+                self.R_XY[1,0]  =- pow(self.rho,2.0) *np.exp(-pow(sigma_thetaTrigo,2.0)) * np.cos(angleTrigo)* np.sin(angleTrigo) + 0.5*(pow(self.rho,2.0) + pow(self.sigma_rho,2.0))\
+                *                  (np.sin(2*angleTrigo)*np.exp(-2*pow(sigma_thetaTrigo,2.0) ));
+                
+                 
+          
+        
+                self.R_XY[0,1]      = self.R_XY[1,0]           
+                
+                self.Position.setXYZ( float(self.z_XY[0]),float(self.z_XY[1]),0.0,'ENU')
+                 
+                V,D = np.linalg.eig(self.R_XY)
+                a = 0
+                if V[0]<V[1]:
+                    a = 1
+                self.width  =  2*np.sqrt(np.abs(5.991*V[0]))
+                self.height =  2*np.sqrt(np.abs(5.991*V[1]))       
+                self.angle  =  np.arctan2(D[1,a],D[0,a])*180/np.pi
+                
+                self.Location[0]       =  self.z_XY[0]   
+                self.Location[1]       =  self.z_XY[1]   
             
 class Plot(object):
     def __init__(self,idScan = 0, rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
@@ -185,6 +200,7 @@ class Plot(object):
         self.z              = np.zeros((2,1))
         self.R_XY           = np.zeros((2,2))
         self.z_XY           = np.zeros((2,1))
+
         self.width          = 0 #largeur de l'ellipse d'incertitude
         self.height         = 0 #hauteur de l'ellipse d'incertitude
         self.angle          = 0 #orientation de l'ellipse d'incertitude dans le sens anti horaire en degré
@@ -209,7 +225,7 @@ class Plot(object):
         
         
     def updateLocation(self,  _scan ):
-
+ 
         if self.type == PLOTType.SPHERICAL and _scan.sensorOrientation!=None:
             self.R              = np.zeros((3,3))
             self.z              = np.zeros((3,1))
@@ -224,15 +240,21 @@ class Plot(object):
             
             #converted measurement
             azimut              = np.pi/2 -  (_scan.sensorOrientation.yaw  + self.theta)   *np.pi/180
-            site                = self.phi #* np.pi/180
+            site                = self.phi* np.pi/180
             
-            sensorLoc           =    np.array([_scan.sensorPosition.x_ENU, _scan.sensorPosition.y_ENU]) 
+            sensorLoc           =    np.array([_scan.sensorPosition.x_ENU, _scan.sensorPosition.y_ENU, _scan.sensorPosition.z_ENU]) 
             m_ec_azimut         =    self.sigma_theta * np.pi/180
             m_ec_site           =    self.sigma_phi * np.pi/180
+ 
+            lambda_Beta  = np.exp(-pow(m_ec_azimut,2.0))
+            lambda_Beta1 = np.exp(-2*pow(m_ec_azimut,2.0))
+            lambda_phi   = np.exp(-pow(m_ec_site,2.0))
+            lambda_phi1  = np.exp(-2*pow(m_ec_site,2.0))
             
-            self.z_XY[0] = self.rho*np.cos(azimut)*np.cos(site) - self.rho*np.cos(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[0];
-            self.z_XY[1] = self.rho*np.sin(azimut)*np.cos(site) - self.rho*np.sin(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[1];
-            self.z_XY[2] = self.rho*np.sin(site) - self.rho*np.sin(site)*(1 -  np.exp(1/2*(-pow(m_ec_site,2.0))))  ;
+ 
+            self.z_XY[0] = self.rho*np.cos(azimut)*np.cos(site)+self.rho*np.cos(azimut)*np.cos(site)*(1-lambda_Beta*lambda_phi)+ sensorLoc[0];# - self.rho*np.cos(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[0];
+            self.z_XY[1] = self.rho*np.sin(azimut)*np.cos(site)+self.rho*np.sin(azimut)*np.cos(site)*(1-lambda_Beta*lambda_phi)+ sensorLoc[1];# - self.rho*np.sin(azimut)*np.cos(site)*(np.exp(-pow(m_ec_azimut,2.0))*np.exp(-pow(m_ec_site,2.0)) - np.exp(1/2*(-pow(m_ec_azimut,2.0)))*np.exp(1/2*(-pow(m_ec_site,2.0)))) + sensorLoc[1];
+            self.z_XY[2] = self.rho*np.sin(site) +self.rho*np.sin(site) *(1-lambda_phi)+ sensorLoc[2];
 
          
             Alpha_x = pow(np.sin(azimut),2.0)*np.sinh( pow(m_ec_azimut,2.0)) + pow(np.cos(azimut),2.0)*np.cosh(pow(m_ec_azimut,2.0));
@@ -257,7 +279,7 @@ class Plot(object):
             self.R_XY[2,0]=self.R_XY[0,2];
             self.R_XY[2,1]=self.R_XY[1,2];
             
-            
+   
             self.Position.setXYZ( float(self.z_XY[0]),float(self.z_XY[1]),float(self.z_XY[2]),'ENU')
               
             V,D = np.linalg.eig(self.R_XY)
@@ -281,8 +303,8 @@ class Plot(object):
 #            print(_scan.sensor.position.y_ENU)
 #            print(_scan.sensor.orientationBiased.yaw )
 #            print(_scan.sensor.orientation.yaw )
-            angleTrigo          =    np.pi/2 -  (_scan.sensor.orientationBiased.yaw  + self.theta)   *np.pi/180 
-            sensorLoc           =    np.array([_scan.sensor.positionBiased.x_ENU, _scan.sensor.positionBiased.y_ENU]) 
+            angleTrigo          =    np.pi/2 -  (_scan.sensor.orientation.yaw  + self.theta)   *np.pi/180 
+            sensorLoc           =    np.array([_scan.sensor.position.x_ENU, _scan.sensor.position.y_ENU, _scan.sensor.position.z_ENU]) 
             sigma_thetaTrigo    =    self.sigma_theta * np.pi/180   
             
             self.z_XY[0]        = sensorLoc[0] + self.rho*np.cos(angleTrigo)*(1+( 1-np.exp(-0.5* sigma_thetaTrigo*sigma_thetaTrigo))) # -   self.rho*np.cos(angleTrigo) - np.exp(- 0.5* sigma_thetaTrigo*sigma_thetaTrigo)) 
@@ -326,7 +348,7 @@ class Scan(object):
         self.id             = numberScan
         self.sensor         = sensor
         self.plots          = []
-        self.tracks          = []
+        self.tracks         = []
         self.dateTime       = datetTime
         self.plotType       = PLOTType.NOTYPE
         self.sensorPosition = None
@@ -343,8 +365,8 @@ class Scan(object):
           if self.sensor != None:
               print(self.sensor.id)
           print(self.plotType.name)
-          print(self.plots)
-          print(self.tracks)
+          print('plots: ',self.plots)
+          print('traks: ',self.tracks)
           print(self.dateTime.toString("HH:mm:ss.z"))
           print("---> Fin")
                          
@@ -384,9 +406,9 @@ class Scan(object):
              _plot = Plot() 
              _plot.idScan = self.id
              _plot.type  = self.plotType
-             
-             infos      = FAInfos[j]
-             
+    
+             infos      = np.array(FAInfos[j])
+   
              FAClass     = FAClasses[j] 
              if self.sensor.sensorCoverage:
                  for _cover in self.sensor.sensorCoverage:
@@ -424,11 +446,12 @@ class Scan(object):
                 _plot.sigma_phi      = sigma_phi  #* 180/np.pi
                 _plot.theta          = FalseAlarms[1,j] * 180/np.pi  
                 _plot.sigma_theta    = sigma_theta    #* 180/np.pi
-                for _type in TARGET_TYPE:
-                    if _type.value.value == FAClasses[j]: 
-                        _plot.Classification      = _type.name
+                
+            
+            
+             _plot.Classification      = FAClasses[j]
                         
-             _plot.ProbaClassification = PAClasses[j]
+             _plot.ProbaClassification = PAClasses[:,j]
              _plot.updateLocation(self)
              _plot.dateTime         = time
      
@@ -442,8 +465,8 @@ class Scan(object):
                  _plot.value_info_1    =  infos[0,1]
                  _plot.info_2          =  infos[1,0]
                  _plot.value_info_2    =  infos[1,1]
-                 
-  
+     
+
              
              self.plots.append(_plot) 
       def addFalseTrack(self,FA,time = QDateTime(),FAClasses=[],PAClasses=[]  ,FAInfos =[] ):
@@ -513,23 +536,32 @@ class Scan(object):
                         _state.Classification      = _type.name
                         
              _state.ProbaClassification = PAClasses[j]
+             _state.idTarget             = -1
+             _state.velocity             = 10*np.random.randn(3,1)
              _state.updateLocation(self)
              _state.dateTime         = time
      
+ 
+  
+
+  
+ 
+ 
  
                  
   
              
              self.tracks.append(_state) 
-      def addTrack(self,truePosition = Position(),idtarget = -1,targetClass= TARGET_TYPE.UNKNOWN,time = QDateTime(),_class= 'unknown',_probaClass = 1.0 ,infos =[],_url=''):
+      def addTrack(self,truePosition = Position(),velocity = Velocity(), idtarget = -1,targetClass= TARGET_TYPE.UNKNOWN,time = QDateTime(),_class= 'unknown',_probaClass = 1.0 ,infos =[],_url=''):
+ 
          if self.sensor == None : 
               return  
          if self.sensor.node == None :
              return
-         
+     
          if self.sensorPosition==None or self.sensorOrientation == None:
               return
-          
+   
          _state = State()
          
          distance_3D = self.sensorPosition.distanceToPoint(truePosition)
@@ -544,7 +576,7 @@ class Scan(object):
          sigma_rho   = 1
          sigma_theta = 0.1
          sigma_phi   = 0.1 
-         
+         _state.Velocity =  np.array([[velocity.x],[velocity.y],[velocity.z]]) + 3*np.random.rand(3,1)
  
     
          if self.plotType == PLOTType.SPHERICAL_TRACK:
@@ -567,14 +599,20 @@ class Scan(object):
              _state.sigma_theta    =  sigma_theta #* 180/np.pi
              _state.rho            =  distance_3D  + float(sigma_rho    *0.5*(self.sensor.randomSeeded.randn(1)))
              _state.sigma_rho      =  sigma_rho     
-             
+ 
          _state.idScan               = self.id
          _state.type                 = self.plotType
+         _state.velocity             = velocity
          _state.updateLocation(self)
+
          _state.idTarget             = idtarget
          _state.dateTime             = time
          _state.Classification       = _class 
          _state.ProbaClassification  = _probaClass
+         
+
+ 
+    
          self.tracks.append(_state)   
          return            
       def addPlot(self,truePosition = Position(),idtarget = -1,targetClass= TARGET_TYPE.UNKNOWN,time = QDateTime(),_class= 'unknown',_probaClass = 1.0 ,infos =[],_url=''):
@@ -667,6 +705,7 @@ class Scan(object):
                  _plot.value_info_1    =  infos[0,1]
                  _plot.info_2          =  infos[1,0]
                  _plot.value_info_2    =  infos[1,1]
+ 
                  
                  
          _plot.addImageInfo(_url)
@@ -683,100 +722,186 @@ class Scan(object):
                  
              
       def toJson(self):
- 
-          json  = '{'+\
-            '"scanId": '+str(self.id)+','+\
-	         '"sensorId": "'+str(self.sensor.id)+'",'+\
-            '"code": 7,'+\
-            '"detection": ['
-            
-          for det in self.plots:
-            json+= '{'+\
-		           '"plotId":'+ str(det.id)+','+\
-		           '"position_available": 0,'
-                   
-            if self.plotType == PLOTType.ANGULAR:
-                
-                json+=  '"plotType": "BEARING_1D",'+\
-		                  '"azimut": '+str( det.theta)+','+\
-		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-		                   '"classification":"' +str(det.Classification)+'",'+\
-		                  '"probaClassification": "'+str(det.ProbaClassification) +'"},'     
-                
-             
-            elif self.plotType == PLOTType.DISTANCE:
-                json+=  '"plotType": "RANGE",'+\
-		                  '"range": '+str(det.rho)+','+\
-		                  '"stdRange": '+str(det.sigma_rho)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-		                  '"classification": "UNKNOWN",'+\
-		                  '"probaClassification": "1.0"},'
-            elif self.plotType == PLOTType.SPHERICAL:
-                json+=  '"plotType": "SPHERICAL",'+\
-		                  '"range": '+str(det.rho)+','+\
-		                  '"stdRange": '+str(det.sigma_rho)+','+\
-                        '"azimut": '+str(det.theta)+','+\
-		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
-                        '"site": '+str( det.phi)+','+\
-                        '"stdSite": '+str(det.sigma_phi)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-		                  '"classification": "UNKNOWN",'+\
-		                  '"probaClassification": "1.0"},'
+          #print(self.printInfo())
+          json  =''
+          if len(self.tracks)>0:
+              json  ={}
+              json["scanId"] = self.id
+              json["sensorId"] = str(self.sensor.id)
+              json["code"] = 11
+              json['scanTime']    =self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.zzz") 
+              json["tracks"] = []
 
-            elif self.plotType == PLOTType.ANGULAR2D:
-                #print(-self.elevation + det.phi*180/np.pi)
-                json+=  '"plotType": "BEARING_2D",'+\
-                        '"azimut": '+str(det.theta )+','+\
-		                  '"stdAzimut": '+str(det.sigma_theta )+','+\
-                        '"site": '+str( det.phi)+','+\
-                        '"stdSite": '+str(det.sigma_phi)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-		                  '"classification":"' +str(det.Classification)+'",'+\
-		                  '"probaClassification": "'+str(det.ProbaClassification) +'"},'
+              _pos  = {}
+              _pos["longitude"] = REFERENCE_POINT.longitude
+              _pos["latitude"]  = REFERENCE_POINT.latitude
+              _pos["altitude"]  = REFERENCE_POINT.altitude
+              _pos["format"]    = "WGS84"
+              json["referentiel"] = _pos
+              rank= 1
+              for _track in self.tracks:
+                  _state = {}
+                  _state['trackNumber'] = _track.id
+                  _state['trackInScan'] = str(rank)+'/'+str(len(self.tracks))
+                  _state['hsotility']   = "UNKNOWN"
+                  _state['state']       ="CONFIRMED"
+                  _state['node']        = "192.168.1."+str(self.sensor.id_node)
+
+                  
+                  json["tracks"].append(_state)
+                  
+                  if _track.type == PLOTType.POLAR_TRACK:
+                      
+                      _position             = {}
+                      _position['format']   = "EN"
+                      _position['x']        = float(_track.Location[0])
+                      _position['y']        = float(_track.Location[1])
+                      _state['position']    =  _position
+                      _velocity             = {}
+                      _velocity['format']   = "EN"
+                      _velocity['x']        = float(_track.Velocity[0])
+                      _velocity['y']        = float(_track.Velocity[1])  
+                      _state['velocity']    = _velocity
+                      _state['date']        = _track.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.zzz")
+                      _state['associatedPLots'] = []
+                      
+                      _precision                    = {}
+                      _precision['format']          = "EN" 
+                      _precision['col']             = 2
+                      _precision['row']             = 2
+                      _precision['components']      = "xy" 
+                      _precision['covariance']      = _track.jsonCov() 
+                      
+                      _state['precision']   = _precision    
+                  if _track.type == PLOTType.SPHERICAL_TRACK:
+                       
+                       _position             = {}
+                       _position['format']   = "ENU"
+ 
+                       _position['x']        = float(_track.Location[0])
+                       _position['y']        = float(_track.Location[1])
+                       _position['z']        = float(_track.Location[2])  
+                       _state['position']    =  _position
+                       _velocity             = {}
+                       _velocity['format']   = "ENU"
+                       _velocity['x']        = float(_track.Velocity[0])
+                       _velocity['y']        = float(_track.Velocity[1])  
+                       _velocity['z']        = float(_track.Velocity[2]) 
+                       _state['velocity']    = _velocity
+                       _state['date']        = _track.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.zzz")
+                       _state['associatedPLots'] = []
+                       
+                       _precision                    = {}
+                       _precision['format']          = "ENU" 
+                       _precision['components']      = "xyz" 
+                       _precision['col']             = 3
+                       _precision['row']             = 3
+                       _precision['covariance']      = _track.jsonCov() 
+                       
+                       _state['precision']   = _precision               
+       
+          
+                  
+                  rank+=1
+              print(json)
+              json = jsonClass.dumps(json)     
+              
+                  
+                  
+          if len(self.plots)>0:
+              json  = '{'+\
+                '"scanId": '+str(self.id)+','+\
+    	         '"sensorId": "'+str(self.sensor.id)+'",'+\
+                '"code": 7,'+\
+                '"detection": ['
+                
+              for det in self.plots:
+                json+= '{'+\
+    		           '"plotId":'+ str(det.id)+','+\
+    		           '"position_available": 0,'
+                       
+                if self.plotType == PLOTType.ANGULAR:
+                    
+                    json+=  '"plotType": "BEARING_1D",'+\
+    		                  '"azimut": '+str( det.theta)+','+\
+    		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+    		                   '"classification":"' +str(det.Classification)+'",'+\
+    		                  '"probaClassification": "'+str(det.ProbaClassification) +'"},'     
+                    
+                 
+                elif self.plotType == PLOTType.DISTANCE:
+                    json+=  '"plotType": "RANGE",'+\
+    		                  '"range": '+str(det.rho)+','+\
+    		                  '"stdRange": '+str(det.sigma_rho)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+    		                  '"classification": "UNKNOWN",'+\
+    		                  '"probaClassification": "1.0"},'
+                elif self.plotType == PLOTType.SPHERICAL:
+                    json+=  '"plotType": "SPHERICAL",'+\
+    		                  '"range": '+str(det.rho)+','+\
+    		                  '"stdRange": '+str(det.sigma_rho)+','+\
+                            '"azimut": '+str(det.theta)+','+\
+    		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
+                            '"site": '+str( det.phi)+','+\
+                            '"stdSite": '+str(det.sigma_phi)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+    		                  '"classification": "UNKNOWN",'+\
+    		                  '"probaClassification": "1.0"},'
     
-            elif self.plotType == PLOTType.POLAR:
-                json+=  '"plotType": "POLAR",'+\
-		                  '"azimut": '+str(det.theta)+','+\
-		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
-                        '"range": '+str(det.rho)+','+\
-		                  '"stdRange": '+str(det.sigma_rho)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-		                  '"classification": "UNKNOWN",'+\
-		                  '"probaClassification": "1.0"},'
-                
-            elif self.plotType == PLOTType.POLAR_SQUIRE:
-                json+= '"plotType": "POLAR",'+\
-                 '"azimut": '+str(  det.theta )+','+\
-                 '"stdAzimut": '+str(det.sigma_theta)+','+\
-                 '"range": '+str(det.rho)+','+\
-                 '"stdRange": '+str(det.sigma_rho)+','+\
-                 '"VelocityType": "NOVELOCITY",'+\
-                 '"plotTime": "'+det.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
-                 '"dataType_1":  " '+det.info_1+'",'+\
-                 '"data_1":   '+str(det.value_info_1)+','+\
-                 '"dataType_2":  " '+det.info_2+'",'+\
-                 '"data_2":   '+str(det.value_info_2)+','+\
-                 '"classification": "UNKNOWN",'+\
-                 '"probaClassification": "1.0"},'
-            elif self.plotType == PLOTType.PIR_EVENT:
-                        json+=  '"plotType": "BEARING_1D",'+\
-		                  '"azimut": '+str(0.0)+','+\
-		                  '"stdAzimut": '+str(0.01)+','+\
-		                  '"VelocityType": "NOVELOCITY",'+\
-		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"},'   
-                
-                
-          json = json[:-1]
-          json +='],'+\
-            '"scanTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"'+\
-            '}'
-   
+                elif self.plotType == PLOTType.ANGULAR2D:
+                    #print(-self.elevation + det.phi*180/np.pi)
+                    json+=  '"plotType": "BEARING_2D",'+\
+                            '"azimut": '+str(det.theta )+','+\
+    		                  '"stdAzimut": '+str(det.sigma_theta )+','+\
+                            '"site": '+str( det.phi)+','+\
+                            '"stdSite": '+str(det.sigma_phi)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+    		                  '"classification":"' +str(det.Classification)+'",'+\
+    		                  '"probaClassification": "'+str(det.ProbaClassification) +'"},'
+        
+                elif self.plotType == PLOTType.POLAR:
+                    json+=  '"plotType": "POLAR",'+\
+    		                  '"azimut": '+str(det.theta)+','+\
+    		                  '"stdAzimut": '+str(det.sigma_theta)+','+\
+                            '"range": '+str(det.rho)+','+\
+    		                  '"stdRange": '+str(det.sigma_rho)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+    		                  '"classification": "UNKNOWN",'+\
+    		                  '"probaClassification": "1.0"},'
+                    
+                elif self.plotType == PLOTType.POLAR_SQUIRE:
+                    json+= '"plotType": "POLAR",'+\
+                     '"azimut": '+str(  det.theta )+','+\
+                     '"stdAzimut": '+str(det.sigma_theta)+','+\
+                     '"range": '+str(det.rho)+','+\
+                     '"stdRange": '+str(det.sigma_rho)+','+\
+                     '"VelocityType": "NOVELOCITY",'+\
+                     '"plotTime": "'+det.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'",'+\
+                     '"dataType_1":  " '+det.info_1+'",'+\
+                     '"data_1":   '+str(det.value_info_1)+','+\
+                     '"dataType_2":  " '+det.info_2+'",'+\
+                     '"data_2":   '+str(det.value_info_2)+','+\
+                     '"classification": "UNKNOWN",'+\
+                     '"probaClassification": "1.0"},'
+                elif self.plotType == PLOTType.PIR_EVENT:
+                            json+=  '"plotType": "BEARING_1D",'+\
+    		                  '"azimut": '+str(0.0)+','+\
+    		                  '"stdAzimut": '+str(0.01)+','+\
+    		                  '"VelocityType": "NOVELOCITY",'+\
+    		                  '"plotTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"},'   
+                    
+                    
+              json = json[:-1]
+              json +='],'+\
+                '"scanTime": "'+self.dateTime.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"'+\
+                '}'
+       
        
     
           return json           

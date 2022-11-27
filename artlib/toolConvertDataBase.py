@@ -14,16 +14,16 @@ import threading
 import numpy as np
 import io
 from Managers.dataManager import DataManager as dataManager
-from sensor import Node, Sensor,SensorCoverage, FOVType, SensorBias
+from sensor import Node, Sensor,SensorCoverage, FOVType
 from scan import Plot,PLOTType, Scan
 import sqlite3
 
 from target  import Target,TARGET_TYPE, RECORDED_TYPE
 from saver   import saveData
 
-from tool_tracking.track import Track
-from tool_tracking.state import State
-from tool_tracking.motionModel import StateType
+from toolTracking.track import Track
+from toolTracking.state import State
+from toolTracking.utils import StateType
 
 import datetime
 

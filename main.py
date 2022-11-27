@@ -24,7 +24,6 @@ import matplotlib
 matplotlib.use('Qt5Agg')
 
 
-
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.backend_bases import key_press_handler
@@ -43,7 +42,7 @@ from Managers.dataManager import DataManager
 from console import Console
 from loader  import data
 
-from tablePlots import tablePlots
+#from tablePlots import tablePlots
 from metrics.tableMetrics import metricsWidget
 from metrics.MOP import MOP 
 from metrics.MOP import MOPComparison 
@@ -55,8 +54,8 @@ from enum import Enum, unique
 from target  import Target, RandomTargets
 from sensor   import Node, Sensor
 from mobileNode import MobileNode
-from tool_tracking.tracker import Tracker
-from tool_tracking.BiasProcessing.corrector.roadCorrector import RoadCorrector
+from toolTracking.tracker import Tracker
+ 
 from saver   import saveData
 from metrics.gospa_ospa import Metrics
 
@@ -65,7 +64,7 @@ from metrics.gospa_ospa import Metrics
 #    from shieldViewer import Ui_Dialog as Ui_Shield
 
 
-from tool_tracking.estimator import TRACKER_TYPE
+from toolTracking.utils import trackerType 
 
 
 
@@ -137,7 +136,7 @@ class mainwindow(QMainWindow):
 #        self.GIS.moveToThread(self.threadGIS)
 #        self.threadGIS.start() 
         
-        self.setWindowTitle("Onera GIS")
+        self.setWindowTitle("Benjamin GIS")
  
         self.mpl_toolbar = NavigationToolbar(self.canvas, mainWidget)
         pixmap = QPixmap("icones/refresh.png")
@@ -157,7 +156,7 @@ class mainwindow(QMainWindow):
 
         Vlayout = QVBoxLayout()
         Vlayout.addWidget(self.mpl_toolbar)     
-        Vlayout.addWidget(self.canvas, Qt.AlignHCenter | Qt.AlignVCenter) 
+        Vlayout.addWidget(self.canvas ) 
         tab1 = QWidget()
         tab1.setLayout(Vlayout)
         self.tabs.addTab(tab1,"GIS")
@@ -168,7 +167,7 @@ class mainwindow(QMainWindow):
         # variables
         self.currentSelectoption = []
         #----------- Table des détections
-        
+        '''
         self.tablePlots = tablePlots()
         Vlayout4 = QVBoxLayout()
         Vlayout4.addWidget(self.tablePlots)    
@@ -176,7 +175,7 @@ class mainwindow(QMainWindow):
         tab3.setLayout(Vlayout4)
         self.tabs.addTab(tab3,"Table des plots")
         self.tabs.tabBar().tabButton(1,QTabBar.RightSide).hide()
-
+        '''
         #----------- Console
         
         self.console        = Console()
@@ -187,10 +186,10 @@ class mainwindow(QMainWindow):
         tab2.setLayout(Vlayout3)
         self.tabs.addTab(tab2,"Console")
         
-        self.tabs.tabBar().tabButton(2,QTabBar.RightSide).hide()
+        self.tabs.tabBar().tabButton(1,QTabBar.RightSide).hide()
         
         Vlayout2 = QVBoxLayout()
-        Vlayout2.addWidget(self.tabs, Qt.AlignHCenter | Qt.AlignVCenter) 
+        Vlayout2.addWidget(self.tabs ) 
         mainWidget.setLayout(Vlayout2)
         
         self.tabs.tabCloseRequested.connect(self.closeTab)
@@ -240,14 +239,14 @@ class mainwindow(QMainWindow):
         self.loader.referenceTime.connect(self.receiveReferenceTime)
         self.loader.endTime.connect(self.receiveEndTime)
         self.loader.emitNodes.connect(self.receiveNode)
-        self.loader.emitBiasCorrectors.connect(self.receiveBiasCorrectors)
+ 
         self.loader.emitSensors.connect(self.receiveSensors)
         self.loader.emitParameters.connect(self.receiveParameters)
         self.loader.emitDetections.connect(self.receiveDetections)
         self.loader.emitTargets.connect(self.receiveTargets)
         self.loader.emitTrackers.connect(self.receiveTrackers)
-        self.loader.emitSelectedDetections.connect(self.receiveSelectedDetections)
-        self.loader.emitStates.connect(self.receiveStates)
+        #self.loader.emitSelectedDetections.connect(self.receiveSelectedDetections)
+        #self.loader.emitStates.connect(self.receiveStates)
  
         #----------- MOP
         
@@ -300,7 +299,7 @@ class mainwindow(QMainWindow):
         self.sextantServer.newRun(value)
         self.sextantServer.synchronize(timeref.addSecs(-15))
         print('------------- sleep 10 seconds ------------')     
-        time.sleep(5)
+        time.sleep(1)
     #    self.timer.lcd.setDateTime(time)
         print('------------- restart ------------')  
         for _node in self.manager.nodes():
@@ -453,7 +452,15 @@ class mainwindow(QMainWindow):
         self.isStarted = True
         self.console.write("start timer")
  
- 
+        self.saver.cleanTableReferencePoint()
+        self.saver.cleanTableNodes()
+        self.saver.cleanTableSensors()
+        self.saver.cleanTableParameters()
+        self.saver.cleanTableClasses()
+        self.saver.cleanTableTrackers()     
+        self.saver.cleanTableTargets()    
+        
+        
         self.loader.start()
         self.saver.saveReferencePoint()
         self.saver.saveNodes(_sTime)
@@ -467,15 +474,13 @@ class mainwindow(QMainWindow):
                 _sensor.start()
             if _node.tracker !=None:
                 _node.tracker.start()
-            if _node.biasCorrector != None:
-                _node.biasCorrector.initialize()
-                self.GIS.biasCorrectorRoad()
+ 
 
         self.timer.startThread()
     def receiveGauss(self):
          for node in self.manager.nodes() :
     
-            if node.tracker and  node.tracker.filter == TRACKER_TYPE.GMPHD:
+            if node.tracker and  node.tracker.filter == trackerType.GMPHD:
              
                 self.GIS.receiveGauss(node.tracker)
     def receiveTracks(self,tracks = []):
@@ -491,6 +496,7 @@ class mainwindow(QMainWindow):
 
     def receiveTrackers(self,trackers):
         self.GIS.receiveTrackers(trackers)
+ 
         for node in self.manager.nodes() :
             for _tracker in trackers:
                 if _tracker.id_node == node.id:
@@ -500,20 +506,23 @@ class mainwindow(QMainWindow):
                    for _node in self.manager.nodes():
                        for _sensor in _node.sensors:
                            _sensor.newScan.connect(_tracker.receiveScan)
-                           _sensor.newScan.connect(lambda scan, node = _node : self.biasCorrectorUpdate(node))
+                           _sensor.newScan.connect(self.receiveScan)
+                           
                
                    _tracker.tracks_display.connect(self.saver.saveTracks)
                    _tracker.tracks_display.connect(self.GIS.receiveTracks)
                    _tracker.emitTracks.connect(self.receiveTracks)
                    _tracker.gauss_display.connect(self.receiveGauss)
                    _tracker.toDisplay(self.axes,self.canvas)
-
+     
     def receiveScan(self, scan = None):
             #scan.sensor.clear()
-            #print('in  receive Scan')
+            #obligé car sextant server tourne sur un autre thread, les connect sont supprimés
             self.sextantServer.receiveScan(scan)
+            self.saver.receiveScan(scan)
             if self.clientShield!=None:
                 self.clientShield.receiveScans([scan])
+  
     def receiveParameters(self,parameters):
         for _node in self.manager.nodes() :
             for _sensor in _node.sensors:
@@ -533,12 +542,15 @@ class mainwindow(QMainWindow):
             for _sensor in sensors:
  
                 if _sensor.id_node == node.id:
-                   _sensor.newScan.connect(self.sextantServer.receiveScan)
-                   _sensor.newScan.connect(self.receiveScan)
+
+
+                   #_sensor.newScan.connect(self.receiveScan)
                    _sensor.newScan.connect(self.GIS.receiveScan)
+                   _sensor.newScan.connect(self.receiveScan)
+                   
                    if node.tracker:
                        _sensor.newScan.connect(node.tracker.receiveScan)
-                   print('sensor recorded')
+                   #print('sensor recorded')
                    self.manager.addSensor(_sensor)
                    self.timer.receiveTime.connect(_sensor.receiveTime)
                                       
@@ -555,31 +567,23 @@ class mainwindow(QMainWindow):
                    
         self.GIS.receiveSensors()
         self.sextantServer.receiveSensors()
+    '''
     def receiveSelectedDetections(self,_detections):
         #print('receive selected dets in setup')
         self.tablePlots.receiveDetections(_detections)
-    
+    '''
+    '''
     def receiveStates(self,_states):
         if _states!=[]:
-           print("data reçues")
+ 
            self.GIS.receiveStates(_states)
            self.sextantServer.receiveStates(_states)
+    '''
     def receiveDetections(self,_detections):
         if _detections != []:
             self.GIS.receiveDetections(_detections)
             
-    def receiveBiasCorrectors(self, biasCorrectors):
-        for key in biasCorrectors:
-            for node in self.manager.nodes():
-                if int(node.id) == key:
-                    biasCorrectors[key].parent = node
-
-        if self.GIS.biaisCorrectors == dict():
-            self.GIS.biasTreeInterface.receiveDictionary(biasCorrectors)
-        else :
-            self.GIS.biasTreeInterface.receiveItems(biasCorrectors)
-        
-        self.GIS.biasCorrectorRoad()
+    
         
     def receiveNode(self):
         
@@ -802,8 +806,8 @@ class mainwindow(QMainWindow):
         actionConnect.triggered.connect(self.connection);
         menuConnection.addAction(actionConnect)
         
-        actionConnectSextant= QAction(QIcon(imageConnect), 'connect SEXTANT server', self)
-        actionConnectSextant.setToolTip('click to connect on SEXTANT server!')
+        actionConnectSextant= QAction(QIcon(imageConnect), 'connect LEXLUTOR server', self)
+        actionConnectSextant.setToolTip('click to connect on LEXLUTOR server!')
         icon  = QIcon(imageConnect)
         actionConnectSextant.setIcon(icon)
         actionConnectSextant.triggered.connect(self.connectionSEXTANT);
@@ -911,7 +915,7 @@ class mainwindow(QMainWindow):
         json = self.ui_SafirControls.textEdit_Json.toPlainText()
         self.sextantServer.sendJsonCommand(json);
     def sendSextantQuitSafir(self):
-        self.receiveMessage("sextant try to quit SAFIR NG...")
+        self.receiveMessage("LEXLUTOR try to quit SAFIR NG...")
         cmd = str(' { \
                               "code": 5,\
                               "command": "quit",\
@@ -920,10 +924,10 @@ class mainwindow(QMainWindow):
                 
         self.sextantServer.sendJsonCommand(cmd);
     def trySextantConnection(self):
-        self.receiveMessage("sextant try connection...")
+        self.receiveMessage("LEXLUTOR try connection...")
         self.workerThread.start()
     def trySextantDisConnection(self):
-        self.receiveMessage("sextant disconnection...")
+        self.receiveMessage("LEXLUTOR disconnection...")
        
         self.sextantServer.close()
         self.workerThread.terminate()
@@ -936,7 +940,7 @@ class mainwindow(QMainWindow):
     def connectionSEXTANT(self):
             dockControls = QDockWidget("Controls");
             dockControls.setWindowIcon(QIcon('icones\connection.png'))
-            dockControls.setWindowTitle('Sextant protocol')
+            dockControls.setWindowTitle('LEXLUTOR protocol')
             self.addDockWidget(Qt.LeftDockWidgetArea, dockControls) 
             myWidget = QWidget()
             
@@ -952,10 +956,18 @@ class mainwindow(QMainWindow):
             self.ui_SafirControls.pushButton_QuitSafir.clicked.connect(self.sendSextantQuitSafir)
             self.ui_SafirControls.pushButton_SendJson.clicked.connect(self.sendJsonMessage)
             self.ui_SafirControls.checkBox_Java.stateChanged.connect(self.SextantJava)
+            self.ui_SafirControls.lineEdit_IPAdress.editingFinished.connect(self.newIP)   
+            self.ui_SafirControls.lineEdit_Port.editingFinished.connect(self.newPort)   
+            
 #            self.ui_SafirControls.pushButton_NTP.clicked.connect(self.SextantNTP)
      
  
             dockControls.setWidget(myWidget)
+    def newIP(self):
+        self.sextantServer.newIP(self.ui_SafirControls.lineEdit_IPAdress.text())
+    def newPort(self):
+        self.sextantServer.newPort(self.ui_SafirControls.lineEdit_Port.text())
+        
     def SextantJava(self, int ):
         if self.ui_SafirControls.checkBox_Java.isChecked():
              self.sextantServer.onlyJson = True
@@ -1019,7 +1031,7 @@ class mainwindow(QMainWindow):
         #envoie toute la configuration vers le C2
         print('in sendConfiguration' )
         if self.clientShield!=None:
-            print('---->' )
+ 
             self.clientShield.sendConfiguration()
     def shieldConnected(self):
         self.clientUI.pushButton.setEnabled(True)
@@ -1169,10 +1181,11 @@ class mainwindow(QMainWindow):
                                 self.showWarningDialog('area of interest is not defined')
                         _sensor.toDisplay(self.axes,self.canvas,getReferenceTime())
     def editNode(self,id_node):
-   
+        print(len(self.manager.nodes()))
         for _node in self.manager.nodes():
+            print('in for edit node')
             if _node.id == id_node:
-        
+                print('id node:', id_node) 
                 if _node.editNode() ==1 :
                    
                     _node.update()
@@ -1237,8 +1250,8 @@ class mainwindow(QMainWindow):
         self.console.write("load database")
         fileName, _  = QFileDialog.getOpenFileName(self, 'open dataBase', '.','*.db')        
         if fileName:
-                self.loader.loadData(fileName)
-                self.loader.selectGIS(self.GIS)
+                self.loader.loadData(fileName,self.GIS)
+                #self.loader.selectGIS(self.GIS)
 #    def computeAndStoreOSPA(self,filename):
 #        ground_truth = self.loader.newArray(filename+"gt.db")
 #
@@ -1299,7 +1312,7 @@ class mainwindow(QMainWindow):
         self.console.write(("receiveTime time : %s")%(_time.toString("hh:mm:ss.z")))    
             
         #chargement des données
-        
+
         self.loader.receiveTime(_time)
         
         #Usynchro
@@ -1310,23 +1323,24 @@ class mainwindow(QMainWindow):
         mainwindow.variableGlobale -= 1
        
         #position des cibles
-
-        
+   
+         
 
         for _target in self.manager.targets():
             if utm_isDefined() == False:
                 self.showWarningDialog('area of interest is not defined')    
                 return
-            _target.displayCurrentTime(_time,self.axes)
-            #self.canvas.draw()
+            _target.displayCurrentTime(_time,self.axes,self.canvas)
+      
             
             json = _target.toJson(_time)
             if json!='':
  
                 self.sextantServer.sendJsonMessage(json)
-        
-     
-             
+       
+         
+         
+        ''' 
         for _node in self.manager.nodes():
             
             if type(_node) == MobileNode:
@@ -1336,33 +1350,26 @@ class mainwindow(QMainWindow):
     
                     self.sextantServer.sendJsonMessage(json)
                 
-           
        
- 
+        ''' 
         #self.canvas.draw_idle()
 #        
  
         #self.canvas.blit(self.axes.bbox)
    
- 
+        '''
         xlim = self.axes.get_xlim()
         ylim = self.axes.get_ylim()
         self.axes.set_xlim(xlim)
-        self.axes.set_ylim(ylim)  
-        self.canvas.draw()
+        self.axes.set_ylim(ylim) 
+        '''
+        #self.canvas.draw()
         self.canvas.flush_events()
  
         
         #self.canvas.update()
         QApplication.processEvents()
  
-
-    def biasCorrectorUpdate(self, node):
-        if node.biasCorrector != None:                
-            node.biasCorrector.update()
-            if node.biasCorrector.fixed is not None and node.biasCorrector.canDisplay == False:
-                # self.stopTime()
-                pass
 
     def pauseTime(self):
         self.loader.pause()
@@ -1407,8 +1414,15 @@ class mainwindow(QMainWindow):
         else:
             self.ind =  5#self.ind - 1
             self.GIS.zoomLevel = self.GIS.zoomLevel -1
-            self.axes.set_xlim(event.xdata-bornx*self.ind,event.xdata+bornx*self.ind)
-            self.axes.set_ylim(event.ydata-borny*self.ind,event.ydata+borny*self.ind)
+            
+            if(event.xdata-bornx*self.ind<-180) or (event.xdata+bornx*self.ind>180):
+                self.axes.set_xlim(-180 ,180)
+            else:
+                self.axes.set_xlim(event.xdata-bornx*self.ind,event.xdata+bornx*self.ind)
+            if(event.ydata-borny*self.ind<-90) or (event.ydata+borny*self.ind>90):
+                self.axes.set_ylim(-90 ,90)
+            else :               
+                self.axes.set_ylim(event.ydata-borny*self.ind,event.ydata+borny*self.ind)
             
        
         self.axes.set_aspect('equal', 'datalim')
@@ -1610,7 +1624,7 @@ class mainwindow(QMainWindow):
         self.canvas.draw()
         self.canvas.show()
  
-        self.rect = Rectangle((0,0), 1, 1, color='violet', edgecolor='violet',alpha = 0.5)
+        self.rect = Rectangle((0,0), 1, 1, facecolor='violet', edgecolor='violet',alpha = 0.5)
         self.rect.set_visible(False)
         self.axes.add_patch(self.rect)   
         self.x0 = None

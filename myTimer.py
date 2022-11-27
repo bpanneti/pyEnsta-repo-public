@@ -24,7 +24,7 @@ class Timer(QTimer):
         self.timeout.connect(self.toc)
  
     def run(self):
-        self.start(500)
+        self.start(100)
     def terminate(self):
         self.stop()
     def pause(self):
@@ -134,6 +134,7 @@ class Sequenceur(QWidget):
         
     def displaySituation(self):
         if self.localtime <= self.timeEnd.dateTime() :
+           
             self.receiveTime.emit(self.localtime)
         else:
             self.stop()
@@ -290,7 +291,6 @@ class Sequenceur(QWidget):
     def initUI(self):
  
         self.timer = Timer()
-    
  
         self.OFFSET         = QDateTime.currentDateTime().msecsTo(REFERENCE_TIME)
  

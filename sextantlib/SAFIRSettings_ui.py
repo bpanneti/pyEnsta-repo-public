@@ -11,18 +11,19 @@ from PyQt5.QtGui import *
 from PyQt5.QtOpenGL import *
 from PyQt5.QtWidgets import *
 import json as readJson
-from tool_tracking.state import State as localState
+from toolTracking.state import State as localState
 #import ntplib Package installé.
 import socket   
 import threading
 from Managers.dataManager import DataManager as dataManager
+
 #from sensor import  Sensor, SensorMode, Scan
 import time
 #from sensor import Sensor, Node,SensorMode
-ADRESS_IP ='192.168.100.24' #
+ADRESS_IP ='127.0.0.1' #
 TCP_IP    = ADRESS_IP #'192.168.1.1'#ADRESS_IP.encode('utf-8')#'10.10.11.220'.encode('utf-8')#'localhost' 
 #'127.0.0.1'.encode('utf-8')
-TCP_PORT = 16810
+TCP_PORT = 8080
 BUFFER_SIZE = 1024 
 '''
 class Ui_Connection(object):
@@ -119,12 +120,14 @@ class server(QObject):
                 time.sleep(0.5)
             body = str("")
     def receiveScan(self,_scan  = None):
-        #print('in receive Scan from SEXTANT')
+        #print('in receive Scan from LEXLUTOR')
         json = _scan.toJson()
        
-        return
+         
         if json!='':
+        
             self.sendJsonMessage(json)
+            
     def receiveStates(self,_stats=[]):
         if _stats ==[]:
             return
@@ -143,7 +146,7 @@ class server(QObject):
         '"scanTime": "'+_stats[0].time.toUTC().toString("yyyy-MM-dd HH:mm:ss.z") +'"'+\
         '}'
         body+='</HTTP_JSON>'
-        print(body)
+    
         self.send(body);
     def receiveSensors(self):
         body = str("")
@@ -201,7 +204,13 @@ class server(QObject):
              ADRESS_IP = self.ui.lineEditIP.text()
              TCP_IP    = ADRESS_IP.encode('utf-8')
              TCP_PORT  = int(self.ui.lineEditPort.text())
- 
+    def newIP(self,_IP):
+        ADRESS_IP = _IP
+        TCP_IP = ADRESS_IP.encode('utf-8')
+  
+    def newPort(self,_port):
+        TCP_PORT = int(_port)
+     
     def connect(self):
   
         if not self.connected:
@@ -209,6 +218,7 @@ class server(QObject):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             #self.socket = socket.socket()
+
             self.socket.bind((TCP_IP, TCP_PORT)) 
             self.socket.listen(5)
             self.connected = True

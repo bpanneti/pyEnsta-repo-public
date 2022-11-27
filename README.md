@@ -1,5 +1,5 @@
 # pysim
-Onera simulation project for target tracking 
+CS simulation project for target tracking 
 
 ### Requirements
 
@@ -32,11 +32,11 @@ pip install timer
 python setup.py install
 ```
 
-- Open *shield.py* and change the path at line 23
+
 
 - Copy in folder **pysim/data/carto** (create the folder, if it does not exist), the two following files
 
-  - land_shallow_topo_2048.tif
+
   - dnb_land_ocean_ice.2012.3600x1800_geo.tif
 
 ### Installation

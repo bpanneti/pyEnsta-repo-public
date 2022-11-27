@@ -57,11 +57,14 @@ class TARGET_TYPE(Enum):
     #TYPE , Gabarit in m (lxLxH), icon path, velocity min max in m/s
     UNKNOWN = TYPE(0,  [-1,-1,-1]    , 'icones_target/unknown.png',    [0,30],     'UNKNOWN')
     PAX     = TYPE(1,  [0.5,0.8,1.8] , 'icones_target/pax.png'    ,    [0,8 ],     'PAX')
-    CAR     = TYPE(2,  [1.8,4.2,2.0] , 'icones_target/car.png'    ,    [0,30],     'VEHICLE_LIGHT')
+    CAR     = TYPE(2,  [1.8,4.2,2.0] , 'icones_target/car.png'    ,    [0,30],     'LIGHT_VEHICLE')
     DRONE   = TYPE(3,  [0.3,0.3,0.2] , 'icones_target/drone.png'  ,    [0,17],     'SUAV')
     TANK    = TYPE(4,  [2.5,5.0,3.5] , 'icones_target/tank.png'   ,    [0,18],     'ARMORED_VEHICLE')
-    TRUCK   = TYPE(5,  [2.3,12.0,3.5], 'icones_target/truck.png'  ,    [0,20],     'truck')
-    BIRD    = TYPE(6,  [0.7,0.7,0.4] , 'icones_target/bird.png'   ,    [0,8 ],     'UNKNOWN')
+    TRUCK   = TYPE(5,  [2.3,12.0,3.5], 'icones_target/truck.png'  ,    [0,20],     'HEAVY_VEHICLE')
+    BIRD    = TYPE(6,  [0.7,0.7,0.4] , 'icones_target/bird.png'   ,    [0,8 ],     'BIRD')
+    VOILIER = TYPE(7,  [4,15,20]     , 'icones_target/voilier.png',    [0,7 ],     'SMALL_BOAT')
+    TANKER  = TYPE(8,  [30,100,30]   , 'icones_target/petrolier.png',  [0,10],     'HEAVY_BOAT')
+    GOFAST  = TYPE(9,  [2,10,2]      , 'icones_target/gofast.png',     [0,20],     'LIGHT_BOAT')
 
  
         
@@ -102,7 +105,7 @@ class Target(QWidget):
         self.trajectoryObj          = None#target trajecory graphic object
         self.textObj                = None#target text graphic object
         self.locationObj            = None#target location graphic object
-        self.marker                 = ''#target marker graphic object
+        self.marker                 = '2'#target marker graphic object
         self.width                  = 1 #target line width graphic object
         self.style                  ='-'#target line style graphic object
 
@@ -111,7 +114,7 @@ class Target(QWidget):
     
         
         self.axes                   = None #axes object 
- 
+        self.background             = None
 
       
         
@@ -140,7 +143,7 @@ class Target(QWidget):
           
           if flag == False:
               return ''
-          #print('target time : '+str(dateTime.toString('hh:mm:ss.z')) +' position : {0}, {1}'.format(PositionAtTime.longitude,PositionAtTime.latitude) )
+          #print('target time : '+str(dateTime.toString('hh:mm:ss.z')) +' position : {0}, {1}, {2}'.format(PositionAtTime.longitude,PositionAtTime.latitude,PositionAtTime.altitude) )
    
           json  = '{'+\
             '"code": 6,'+\
@@ -185,43 +188,48 @@ class Target(QWidget):
             axes.lines.remove(self.trajectoryObj)
             self.trajectoryObj = None
             
-    def displayCurrentTime(self,_currentTime, axes):
+    def displayCurrentTime(self,_currentTime, axes,canvas):
         
         if self.axes == None:
             self.axes = axes
             
  
         if self.locationObj !=None:
-            self.axes.lines.remove(self.locationObj)
-         
+            #self.axes.lines.remove(self.locationObj)
+            self.locationObj.remove()
             self.locationObj = None
- 
+           
        
        
         if self.textObj !=None:
             self.textObj.remove()
 
             self.textObj =None 
- 
-     
+            
 
-        
+#        if self.background == None:
+#            self.background = canvas.copy_from_bbox(axes.bbox) 
+            
         flag, PositionAtTime,VelocityTime = self.positionAtTime(_currentTime)
 
-
+         
         if  flag == True: 
             latitude    = PositionAtTime.latitude
             longitude   = PositionAtTime.longitude 
              
             self.locationObj,   = self.axes.plot(longitude,latitude,color = self.color.name() , linewidth= 2,marker = 'o',markerfacecolor = 'blue',markersize = 4,visible = self.locationIsVisible )
             self.textObj        = self.axes.text(longitude,latitude, 'target : '+ str(self.id)+' / '+ str(self.name),   bbox={'facecolor':'red', 'alpha':0.5, 'pad':10} ,visible= self.locationIsVisible  )
-            
+    
 
  
-
-   
+#        if self.background!=None :
+#            canvas.restore_region(self.background)     
+#            canvas.blit(  axes.bbox)  
+            self.axes.draw_artist(self.locationObj )
+            self.axes.draw_artist(self.textObj )
+  
     def smoothReealTrajectorty(self):
-       return
+        
         
        latitude    = []
        longitude   = []
@@ -310,7 +318,7 @@ class Target(QWidget):
         if   self.trajectoryObj !=None:
             axes.lines.remove(self.trajectoryObj)
             self.trajectoryObj = None
-    
+ 
         self.trajectoryObj, =  axes.plot(longitude,latitude,color = self.color.name(),marker = self.marker, linewidth= 2,visible =self.locationIsVisible) #
 #        self.canvas.blit(axes.bbox)
 #        self.canvas.update()
@@ -322,6 +330,9 @@ class Target(QWidget):
         for pos in wayPoints:
             
             self.trajectoryWayPoints.append(Position(pos[1],pos[0],self.altitude))
+        print(wayPoints)    
+        
+        print(self.trajectoryWayPoints)    
         self.update()
         
     def setTreeWidget(self, treeWidget = QTreeWidgetItem()):
@@ -497,7 +508,7 @@ class Target(QWidget):
     def buildTrajectory(self):
 #        self.trajectory = self.trajectoryWayPoints
 #        return True;
-        print(f'target id {self.id} in {self.recordedType.name}')  
+        #print(f'target id {self.id} in {self.recordedType.name}')  
         
         if self.recordedType == RECORDED_TYPE.BASE_ON_WAYPOINTS:
             
@@ -514,25 +525,29 @@ class Target(QWidget):
                 if self.isSplinTrajectory == True   :
                     latitude    =[]
                     longitude   = []
-          
+         
                     for i in range(len(self.trajectoryWayPoints)):
                         longitude.append(self.trajectoryWayPoints[i].longitude)
                         latitude.append(self.trajectoryWayPoints[i].latitude)
-      
+                      
                     if len(longitude)>self.degreeOfTheSpline: 
                   
-                        tck,u=interpolate.splprep([longitude,latitude],k=self.degreeOfTheSpline,s=0.0)
+                        tck,u=interpolate.splprep([longitude,latitude],s=0.0)
+            
                         x_i,y_i= interpolate.splev(np.linspace(0,1,5*len(self.trajectoryWayPoints)),tck)
                         latitude = y_i
                         longitude = x_i
                         self.trajectory =[]
                         for i in range(len( longitude)):
                             altitude = self.altitude
+                     
                             if self.gis:
                                 altitude += self.gis.elevation(latitude[i],longitude[i]) 
+                                
                             point = Position(latitude[i],longitude[i], altitude)
+                           
                             self.trajectory.append(point)
-          
+             
                         self.timeToWayPoints.append(self.startTime)
                         for i in range(len(self.trajectory)-1):
                 
@@ -553,6 +568,7 @@ class Target(QWidget):
                     else:
                         self.isSplinTrajectory = False
                 else:        
+                 
                     self.trajectory = self.trajectoryWayPoints
        
                     self.timeToWayPoints.append(self.startTime)
@@ -576,7 +592,7 @@ class Target(QWidget):
                         self.timeToWayPoints.append(_arrivalDate)
                 
                 #print(len(self.velocityToWayPoints))
-                #print(len(self.trajectory))
+              
                 #print(len(self.timeToWayPoints))
                 return True
             
@@ -713,7 +729,7 @@ class Target(QWidget):
     
             
             Loc = A + diffTime* velocity  
-     
+            #print('----> ', self.trajectory[index+1].altitude)
             velocityAtTime.setXYZ(velocity[0],velocity[1],0.0,'UTM')
             positionAtTime.setXYZ(Loc[0],Loc[1],self.trajectory[index+1].altitude)
  

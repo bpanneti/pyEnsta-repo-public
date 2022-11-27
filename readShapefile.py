@@ -5,7 +5,7 @@ Created on Mon Aug 29 09:05:02 2016
 @author: t0174034
 """
 
-import gdal
+
 import matplotlib.pyplot as plt
 import numpy as np
 import shapefile as shp
@@ -510,7 +510,7 @@ class shapefile:
                     if size == -1:
                         size = 1
               
-                    self.containers[i].layerObj, = axes.plot(x,y,color = self.containers[i].color , linewidth=  size+1,linestyle=self.containers[i].linestyle)
+                    self.containers[i].layerObj, = axes.plot(x,y,color = self.containers[i].color , linewidth=  1,linestyle=self.containers[i].linestyle)
                     #axes.draw_artist(self.containers[i].layerObj[0] )
                     
             #canvas.blit(axes.bbox)
