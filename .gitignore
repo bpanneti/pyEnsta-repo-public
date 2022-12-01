@@ -13,3 +13,11 @@ sextantlib/__pycache__/
 data/carto/sissonne.tif
 data/shapefiles/
 data/base
+tool_tracking/imm.py
+tool_tracking/ekf.py
+tool_tracking/SDA.py
+tool_tracking/gnnsf.py
+tool_tracking/Gaussian.py
+
+
+

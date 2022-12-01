@@ -9,20 +9,6 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtOpenGL import *
 from PyQt5.QtWidgets import *
-#from scan import Scan
-
-
-# from toolTracking.GNNSF_cmkf import GNNSF_cmkf
-# from toolTracking.GNNSF_imm import GNNSF_imm
-# from toolTracking.GMPHD import GMPHD
-# from toolTracking.PDAF_cmkf import PDAF_cmkf
-
-#from tool_tracking.rmkf import rmkf
-#from tool_tracking.sir import Sir, Infos
-# from tool_tracking.PMBM import PMBM
-#from toolTracking.imm import imm
-#from tool_tracking.pf import pf
-# from tool_tracking.PMBM_RM import PMBM_RM
 from toolTracking.utils import  StateType
 from itertools import count
 from utils import isInteger, isNumber
@@ -32,19 +18,16 @@ from collections import namedtuple
 from enum import Enum
 
 from toolTracking.cmkf import cmkf
-from toolTracking.ekf  import ekf
-from toolTracking.imm  import imm
-from toolTracking.gnnsf  import gnnsf
-from toolTracking.sda  import sda
+#---- > from toolTracking.ekf  import ekf
+#---- > from toolTracking.imm  import imm
+#---- > from toolTracking.gnnsf  import gnnsf
+#---- > from toolTracking.sda  import sda
 
 TYPE  = namedtuple('trackerType', ['id', 'name','function'])
 class TRACKER_TYPE(Enum):
     UNKNOWN     = TYPE(0,'UNKNOWN','')
     CMKF        = TYPE(1,'CMKF',cmkf)
-    EKF         = TYPE(2,'EKF',ekf)
-    IMM         = TYPE(3,'IMM',imm)
-    GNNSF       = TYPE(4,'GNNSF',gnnsf)
-    SDA         = TYPE(5,'SDA',sda)
+ 
  
   
 def has_method(o, name):

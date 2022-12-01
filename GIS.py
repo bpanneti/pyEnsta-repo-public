@@ -335,7 +335,7 @@ class GIS(QWidget):
                     for layer in self.dtedList:
          
                         if int(item.text(0))==u:
-                            print("extinction des feux")    
+                            #print("extinction des feux")    
                             layer.set_visible(item.checkState(column))
                             break
                         u = u+1
@@ -566,7 +566,7 @@ class GIS(QWidget):
                         carte = None
                         if '.tif' in self.fileName:
                             carte = cartoFile()
-                            carte.read(self.fileName,TYPE_CARTO.CARTO)
+                            carte.read(self.fileName,TYPE_CARTO.DTED)
                      
                         if '.dt2' in self.fileName:
                        

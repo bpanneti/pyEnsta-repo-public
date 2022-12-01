@@ -97,6 +97,7 @@ class cartographie(QWidget):
         nrows, ncols = self.data_1.shape
  
         if dem.RasterCount==3 :
+            
              band2 = dem.GetRasterBand(2) # Green channel
              band3 = dem.GetRasterBand(3) # Blue channel
              self.data_2 = band2.ReadAsArray()
@@ -145,13 +146,14 @@ class cartographie(QWidget):
             # img = cv2.imread(self.nom)
             # cv2.imshow('test',img)
             
-            if hasattr(self,'data_2'):
+            if hasattr(self,'data_2') and len(self.data_1)==len(self.data_2):
+ 
                 geotiff_shifted = np.dstack((self.data_1, self.data_2, self.data_3))
                 self.layer = axes.imshow(geotiff_shifted, extent=[self.x0, self.x1, self.y1, self.y0])  
 
             else:
-                dem = mpimg.imread(self.nom) 
-                self.layer = axes.imshow(dem, extent=[self.x0, self.x1, self.y1, self.y0])  
+                dem = img.imread(self.nom) 
+                self.layer = axes.imshow(dem, extent=[self.y0, self.y1, self.x1, self.x0])  
 
             #geotiff_shifted = np.rollaxis(self.data_1,0,3)
                         #self.layer = axes.imshow( (geotiff_shifted/np.amax(geotiff_shifted) * 255).astype(np.uint8) , extent=[self.x0, self.x1, self.y1, self.y0])#,cmap='gist_earth', extent=[self.x0, self.x1, self.y1, self.y0]) 
@@ -159,8 +161,10 @@ class cartographie(QWidget):
      
         
         else:
-            
-            self.layer = axes.imshow(self.data_1,cmap='gist_earth', interpolation='nearest', extent=[self.x0, self.x1, self.y1, self.y0]) 
+            dem = img.imread(self.nom) 
+            self.layer = axes.imshow(dem, extent=[self.x0, self.x1, self.y1, self.y0])  
+
+            #self.layer = axes.imshow(self.data_1,cmap='gist_earth', interpolation='nearest', extent=[self.x0, self.x1, self.y1, self.y0]) 
    
        # axes.set_aspect('equal', 'datalim')
 '''      

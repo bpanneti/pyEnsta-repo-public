@@ -64,7 +64,7 @@ class dted(QWidget):
         self.y0 = y0
         self.dx = dx
         self.dy = dy
-       
+
                
     def height(self,mx,my):
         #print('in heig', str(mx),' : ', str(my))

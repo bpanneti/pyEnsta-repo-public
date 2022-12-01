@@ -4,10 +4,10 @@ import numpy as np
 class trackerType(Enum):
     UNKNOWN         = 0
     CMKF            = 1
-    EKF             = 2
-    IMM             = 3
-    GNNSF           = 4
-    SDA             = 5 
+    #----> EKF             = 2
+    #---->IMM             = 3
+    #---->GNNSF           = 4
+    #---->SDA             = 5 
     
 class StateType(Enum):
     UNKNOWN = 0

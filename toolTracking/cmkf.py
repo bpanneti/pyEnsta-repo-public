@@ -53,9 +53,8 @@ class cmkf(Estimator):
     def predictor(currState, time, parameters, flagChange):
    
         periode                        =  currState.time.msecsTo(time)/1000
-        currState.xPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.xEst #np.matrix(np.dot(F(periode, self.state.shape[0]), self.state))
-        currState.pPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.PEst@ F(periode, currState.xEst.shape[0],parameters['models'][0]['type']).T + Q(periode,currState.xEst.shape[0],parameters['models'][0]['type'],parameters['models'][0]['noise'])
-        currState.timeWithoutPlot     += periode
+        currState.xPred                #---- >  =
+        currState.pPred                #---- >  =
 
         if flagChange:
             currState.xEst = currState.xPred
@@ -69,7 +68,7 @@ class cmkf(Estimator):
     @staticmethod
     def estimator(plot, currState, posCapteur=Position(), orientationCapteur=Orientation()):
   
-        #print('track {} updated with plot {}'.format(currState.idTrack,plot.idTarget))
+        #---- > estimation du cmkf
         H = np.zeros([2,4])
         H[0,0] = 1
         H[1,2] = 1
@@ -78,20 +77,10 @@ class cmkf(Estimator):
         z[0] = plot.z_XY[0]
         z[1] = plot.z_XY[1]
         
-        R = np.zeros([2,2])
-        R[0:2,0:2]    = plot.R_XY[0:2,0:2]
-
-        In = z - np.dot(H,currState.xPred) 
-
-        S  =  R + np.dot(H, np.dot(currState.pPred, H.T))
-
-        K  = np.dot(currState.pPred, np.dot(H.T, np.linalg.inv(S)))
-        currState.xEst          = np.array(currState.xPred + np.dot(K, In))
-        currState.pEst         = np.array(np.dot(np.dot(np.identity(currState.xPred.shape[0]) - np.dot(K,H), currState.pPred), (np.identity(currState.xPred.shape[0]) - np.dot(K, H)).T) + np.dot(K, np.dot(R, K.T)))
-    
-        currState.location.setXYZ(float(currState.xEst[0]),float(currState.xEst[2]), 0.0, 'ENU')
-        currState.updateCovariance()
-        currState.likelihood    = 1/np.linalg.det(2*np.pi*S)*np.exp(-0.5*In.T @np.linalg.inv(S)@In)
+        #----> 
+        #----> currState.location.setXYZ(float(currState.xEst[0]),float(currState.xEst[2]), 0.0, 'ENU')
+        #----> currState.updateCovariance()
+        #----> currState.likelihood    =  
    
     def run(self):
 
