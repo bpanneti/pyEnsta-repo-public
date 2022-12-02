@@ -38,7 +38,7 @@ class TrackState:
 def F(periode=0.0, dim=4, motionModelType=MotionModel.UNKNOWN):
     mat #--->  
 
-    if dim == 4 and motionModelType == MotionModel.CV:
+    #if dim == 4 and motionModelType == MotionModel.CV:
             #--->  
     return mat
 
