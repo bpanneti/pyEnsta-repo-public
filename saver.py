@@ -455,10 +455,13 @@ class saveData(QWidget):
              Command.append(("\"%s\",")%( _plot.info_1));
              Command.append(("%s,")%( _plot.value_info_1));
              Command.append(("\"%s\",")%( _plot.info_2));
-             Command.append(("%s")%( _plot.value_info_2));
+             if _plot.value_info_2=="":
+                 Command.append("\"\"");
+             else:
+                 Command.append(("%s")%( _plot.value_info_2));
              Command.append(");");
              Command = ''.join(Command)
-       
+
              self.executeRequest(self.conn,Command)
      def saveReference(self,latitide,longitude,altitude,_time):
    

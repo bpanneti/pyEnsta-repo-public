@@ -214,10 +214,10 @@ class Plot(object):
 #        self.angle          = -1
         self.Classification = "UNKNOWN"
         self.ProbaClassification = 1.0
-        self.info_1         =  []
-        self.value_info_1   =  []
-        self.info_2         =  []
-        self.value_info_2   =  []
+        self.info_1         =  ""
+        self.value_info_1   =  ""
+        self.info_2         =  ""
+        self.value_info_2   =  ""
         self.url            =  str('')
 
     def addImageInfo(self,_url):
