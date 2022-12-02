@@ -36,20 +36,17 @@ class TrackState:
 
 # matrice représentant la cinétique du mouvement
 def F(periode=0.0, dim=4, motionModelType=MotionModel.UNKNOWN):
-    mat = np.identity(dim)
+    mat #--->  
 
     if dim == 4 and motionModelType == MotionModel.CV:
-        mat[0, 1] = periode
-        mat[2, 3] = periode
-
+            #--->  
     return mat
 
 def Q(T=0.0, dim=4, motionModelType=MotionModel.UNKNOWN, noise=0.0):
-    mat = np.identity(dim)
+    mat #--->  
 
     if dim == 4 and motionModelType == MotionModel.CV:
-        mat = np.array([[np.power(T, 3)/3, np.power(T, 2)/2, 0, 0], [np.power(T, 2)/2, T, 0, 0], [0, 0, np.power(T, 3)/3, np.power(T, 2)/2], [0, 0, np.power(T, 2)/2, T]])
-
+        mat #--->  
     noisedMat = np.array(np.power(noise, 2.0)*mat)
 
     return noisedMat
