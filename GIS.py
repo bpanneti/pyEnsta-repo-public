@@ -565,8 +565,8 @@ class GIS(QWidget):
                     
                         carte = None
                         if '.tif' in self.fileName:
-                            carte = cartoFile()
-                            carte.read(self.fileName,TYPE_CARTO.CARTO)
+                            carte = dted()#cartoFile()
+                            carte.read(self.fileName)#,TYPE_CARTO.DTED)
                      
                         if '.dt2' in self.fileName:
                        

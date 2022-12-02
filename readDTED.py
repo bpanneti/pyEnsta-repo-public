@@ -15,6 +15,7 @@ import matplotlib.mlab as ml
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+import matplotlib.image as img
 class dted(QWidget):
  
        
@@ -87,7 +88,9 @@ class dted(QWidget):
         A[A<0] = 0
  
         if self.layer==None:
-            self.layer = axes.imshow(self.dem, cmap='gist_earth', extent=[self.x0, self.x1, self.y1, self.y0])
+            #self.layer = axes.imshow(self.dem, cmap='gist_earth', extent=[self.x0, self.x1, self.y1, self.y0])
+                dem = img.imread(self.nom) 
+                self.layer = axes.imshow(dem,  cmap='gist_earth',extent=[self.x0, self.x1, self.y1, self.y0])  
 
 def main(argv=None):
      print("file")

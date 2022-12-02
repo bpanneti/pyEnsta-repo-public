@@ -1355,7 +1355,7 @@ class Sensor(QWidget):
           
             if index >=0 and index < len(arr):
                 _url = path.dirname(path.abspath(__file__))+'\\images\\'+_targetType.name+'\\'+arr[index]
-            print(_url)    
+            #print(_url)    
         return _url;
     def sensorClassification(self,targetType = TARGET_TYPE.UNKNOWN, truePosition = Position()):
         #cible est considéreé dans le volume de surveillance du capteur
@@ -1400,7 +1400,7 @@ class Sensor(QWidget):
         
         elif self.mode == SensorMode.optroIR2D or self.mode == SensorMode.optroVIS or self.mode == SensorMode.optroIR :
             c = np.random.uniform(0,1,size=(len(TARGET_TYPE),1))
-            c[lassif.value.value] = proba
+            c[classif.value.value] = proba
             probaClass = c/np.sum(c)
             _string = classif.name
         elif self.mode == SensorMode.gonio or self.mode == SensorMode.accoustic  :
