@@ -1490,9 +1490,11 @@ class MOP(QWidget):
             t = t.addSecs(1) 
         #tracks = self.currentDataBase.newTracks()
         for _track in tracks:
-           
+        
             if _track.taillePiste()>5:
+         
                 if _track.tree.data.time <= _timeLine[-1]  and _track.getCurrentState().data.time >=  _timeLine[0]:
+                    print('--->')
                     _track.displayTrack(self.axes,self.canvas) 
     
 
@@ -1517,8 +1519,9 @@ class MOP(QWidget):
         latitude = []
         longitude = []
         for _plot in plots:
-            if _plot.Type == PLOTType.POLAR or _plot.Type == PLOTType.SPHERICAL:
+            if _plot.type == PLOTType.POLAR or _plot.type == PLOTType.SPHERICAL:
                 for _sensor in  sensors:
+
                     if _sensor.id == _plot.idSensor:
                         
                         pos =Position()

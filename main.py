@@ -1066,24 +1066,14 @@ class mainwindow(QMainWindow):
             del self.clientShield
             self.clientShield = None
     def tryShieldConnection(self):
-        
-        if self.clientShield==None:   
-            self.clientShield = ClientShield('client_SHIELD',self.clientUI.lineEdit_IPAdress.text(),int(self.clientUI.lineEdit_Port.text() ))
-            self.clientShield.start()
-            self.clientShield.message.connect(self.receiveMessage)
-            self.clientShield.connected.connect(self.shieldConnected)
-            self.clientShield.disconnected.connect(self.shieldDisonnected)
-            self.clientShield.messageChat.connect(self.shieldChat)
-            self.clientShield.command.connect(self.receiveCommand)
-            self.clientShield.referencePoint.connect(self.receiveReferencePoint)
-            self.clientShield.synchronization.connect(self.timer.synchronization)
-            self.clientShield.synchronization.connect(self.synchronization)
+      pass
+
             
 #        else:
 #            self.clientShield.start() 
     def addMobileNode(self):
         _node = MobileNode()
-        self.manager.addNode(node)
+        self.manager.addNode(_node)
         _nodelist = []
         _nodelist.append(_node)
         self.GIS.receiveNodes()

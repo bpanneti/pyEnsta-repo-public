@@ -324,14 +324,16 @@ class Track(object):
         
     def taillePiste(self):
         return self.tree.depth()
-    '''
+
     def getState(self, idState=-1):
 
+        if self.tree==None:
+           return None    
         flag, val = self.tree.getData(idState)
         if flag:
             return val
         return None
-    ''' 
+
     def update(self, plot=[], sensorPosition=Position(), sensorOrientation=Orientation()):
         # self.tree.displayTree()
         currentStates = []
@@ -425,7 +427,33 @@ class Track(object):
        
         currentStates.clear()   
         tree.show()
-    '''    
+        
+        
+    def cutChilds(self):
+        
+        currentStates = []
+        self.tree.getChilds(currentStates)
+        winner   = None
+        lastDate = None
+        for _state in currentStates:
+            if winner==None or _state.data.time>=winner.data.time:
+                lastDate = _state.data.time
+                winner   = _state
+        if lastDate!=None:
+     
+            self.removeChilds(self.tree,lastDate)
+    def removeChilds(self,_currentNode,lastDate):
+        
+        if _currentNode.childs==[] and _currentNode.data.time < lastDate :
+            return True
+            
+        for _child in _currentNode.childs:
+             if self.removeChilds(_child,lastDate):
+      
+                 _currentNode.removeChild(_child)
+        
+        return False
+   
     def gatings(self, plots=[],threshold = 14):
         currentStates = []
         gatingPlots = []
@@ -481,35 +509,12 @@ class Track(object):
         if classes != []:
             return True, classes
         return False, classes
-    def removeChilds(self,_currentNode,lastDate):
-        
-        if _currentNode.childs==[] and _currentNode.data.time < lastDate :
-            return True
-            
-        for _child in _currentNode.childs:
-             if self.removeChilds(_child,lastDate):
-      
-                 _currentNode.removeChild(_child)
-        
-        return False
+    
     
       
         
         
-    def cutChilds(self):
-        
-        currentStates = []
-        self.tree.getChilds(currentStates)
-        winner   = None
-        lastDate = None
-        for _state in currentStates:
-            if winner==None or _state.data.time>=winner.data.time:
-                lastDate = _state.data.time
-                winner   = _state
-        if lastDate!=None:
-     
-            self.removeChilds(self.tree,lastDate)
-        
+
     def positionAtTime(self, currentTime=QDateTime()):
 
         # recherche des états >= currentTime
@@ -555,8 +560,8 @@ class Track(object):
             V = Velocity()
             V.setXYZ(Vel[0], Vel[1], 0.0, 'UTM')
 
-            stdM = np.sqrt(win.data.covariance[0,0]  + win.data.covariance[2,2]  )
-            stdV = np.sqrt(win.data.covariance[1,1]  + win.data.covariance[3,3]  )
+            stdM = np.sqrt(win.data.PEst[0,0]  + win.data.PEst[2,2]  )
+            stdV = np.sqrt(win.data.PEst[1,1]  + win.data.PEst[3,3]  )
   
             M.setXYZ(Loc[0], Loc[1], win.data.location.altitude)
             positions.append(M)
@@ -567,7 +572,7 @@ class Track(object):
         if positions != []:
             return True, positions, velocities, stdPositions,stdVelocities, nbplots
         return False, [], [],[],[],[]
-    '''
+
     def undisplay(self):
         if self.axes != None:
             axes = self.axes
@@ -647,7 +652,7 @@ class Track(object):
 
         childs = []
         self.tree.getChilds(childs)
-
+   
         for c in childs:
 
             latitude = []
@@ -699,6 +704,7 @@ class Track(object):
          
                 axes.add_patch(e1)
                 self.ellipsesObj.append(e1)
+            
             # =============================
             # display shape
             # =============================
@@ -737,6 +743,7 @@ class Track(object):
             # =============================
             current = c
             while current != None:
+                print((pos.longitude, pos.latitude))   
                 pos = current.data.location
                 latitude.append(pos.latitude)
                 longitude.append(pos.longitude)              
@@ -745,7 +752,7 @@ class Track(object):
             # ,visible=self.trajectoryIsVisible)
             if  displayTack:
                 self.locObj.append(axes.plot(longitude, latitude, '+-', color=self.color.name(), linewidth=2))
-
+            print(longitude,latitude)
             #canvas.update()
             #canvas.flush_events()
             #canvas.draw()

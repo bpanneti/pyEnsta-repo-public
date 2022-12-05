@@ -49,10 +49,10 @@ def sigmas(x, P, c):
 class State(object):
     "Classe état"
     __cnt = count(0)
-    def __init__(self, time = QDateTime(), plot = None,idTrack = -1, state = None,parameters = None):
+    def __init__(self, time = QDateTime(), plot = None,idTrack = -1, state = None,parameters = None,recorded =False):
 
  
-        if parameters == None :    
+        if parameters == None and recorded ==False:    
            print('[Error] no parameetrs defined in state.py')
            return
             
@@ -99,7 +99,7 @@ class State(object):
         self.idPlots             = []
         self.addtionnalInfo      = []
 
-        if parameters['dimension'] == StateType.XY:
+        if parameters != None and parameters['dimension'] == StateType.XY:
                 self.xEst               = np.zeros((4,1))
                 self.PEst               = 10*np.identity(4)
                 self.xEst[0]            = plot.z_XY[0]
@@ -137,7 +137,7 @@ class State(object):
                 self.location.setXYZ(float(self.xEst[0]), float(self.xEst[2]), 0.0, 'ENU')
                 self.updateCovariance()
                 
-        elif parameters['dimension'] == StateType.XYZ:
+        elif parameters != None and parameters['dimension'] == StateType.XYZ:
             self.xEst              = np.zeros((6, 1))
             self.PEst              = np.identity(6)
 
@@ -218,6 +218,7 @@ class State(object):
         self.time = time
         
     def updateLocation(self):
+
         self.location.setXYZ(float(self.xEst[0]), float(self.xEst[2]), 0.0, 'ENU')
         self.getStateECEF()
 
@@ -308,7 +309,7 @@ class State(object):
             self.angle = atan2(u[2, 2], u[0, 2])
 #        print(self.angle)
 #        print('-------')
-        if self.parameters['dimension'] == StateType.XY:
+        if self.parameters!=None and self.parameters['dimension'] == StateType.XY:
             Point                        = Position()
             Point.setXYZ( float(self.xEst[1] + sqrt(np.abs(lmbda[1]))), float(self.xEst[3] + sqrt(np.abs(lmbda[3]))), 0.0)
             Point2                       = Position()
@@ -470,6 +471,7 @@ class State(object):
         actualState = deepCopy(previousState)
 
         actualState.id = next(State.__cnt)
+        actualState.idPere = previousState.id
         actualState.stateSavedInDb = False
         actualState.startedTime = startedTime
         return actualState

@@ -19,8 +19,11 @@ from PyQt5.QtGui import *
 from PyQt5.QtOpenGL import *
 from PyQt5.QtWidgets import QWidget, QMessageBox, QApplication,QProgressBar, QLineEdit,QGridLayout 
 import sys 
-from osgeo import osr, ogr,  gdal
 
+try:
+    from osgeo import ogr, osr, gdal
+except:
+    sys.exit('ERROR: cannot find GDAL/OGR modules')
 
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
