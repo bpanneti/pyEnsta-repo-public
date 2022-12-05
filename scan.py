@@ -36,7 +36,7 @@ class PLOTType(Enum):
     POLAR_TRACK     = 14
 
 class State(object):
-    def __init__(self,idScan = 0, rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
+    def __init__(self,idScan = 0,idSensor='', rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
         global    numberTrack
         numberTrack+=1
         self.rho            = rho
@@ -46,7 +46,7 @@ class State(object):
         self.sigma_theta    = sigma_theta
         self.sigma_phi      = sigma_phi
         self.idScan         = idScan
-        self.idSensor       = ''
+        self.idSensor       = idSensor
         self.dateTime       = QDateTime()
         self.doppler        = 0
         self.sigma_doppler  = 0
@@ -181,7 +181,7 @@ class State(object):
                 self.Location[1]       =  self.z_XY[1]   
             
 class Plot(object):
-    def __init__(self,idScan = 0, rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
+    def __init__(self,idScan = 0, idSensor='',rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
         global nmberPlot        
         nmberPlot +=1        
         self.rho            = rho
@@ -191,7 +191,7 @@ class Plot(object):
         self.sigma_theta    = sigma_theta
         self.sigma_phi      = sigma_phi
         self.idScan         = idScan
-        self.idSensor       = ''
+        self.idSensor       = idSensor
         self.dateTime       = QDateTime()
         self.doppler        = 0
         self.sigma_doppler  = 0
@@ -403,7 +403,7 @@ class Scan(object):
              
           for j in range(0,FalseAlarms.shape[1]):
              flag = False
-             _plot = Plot() 
+             _plot = Plot(idSensor=self.sensor.id) 
              _plot.idScan = self.id
              _plot.type  = self.plotType
     
@@ -618,7 +618,7 @@ class Scan(object):
       def addPlot(self,truePosition = Position(),idtarget = -1,targetClass= TARGET_TYPE.UNKNOWN,time = QDateTime(),_class= 'unknown',_probaClass = 1.0 ,infos =[],_url=''):
    
 
-         _plot = Plot()
+         _plot = Plot(idSensor=self.sensor.id)
          
          distance_3D = self.sensorPosition.distanceToPoint(truePosition)
          

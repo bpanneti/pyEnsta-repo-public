@@ -28,7 +28,8 @@ from toolTracking.tracker import Tracker,TRACKER_TYPE
 from toolTracking.track import Track
 from toolTracking.utils import StateType
 from toolTracking.state import State
- 
+
+from toolTracking.tree import Tree 
 
 import matplotlib.pyplot as plt
 
@@ -1244,7 +1245,7 @@ class data(QWidget):
                      continue
                  
                 container.append(int(row['id_state']))
-                _state          = State()
+                _state          = State(recorded=True)
                 _state.id       = int(row['id_state']) 
                 _state.idPere   = int(row['id_parent']) 
                 _state.time     = QDateTime.fromString(row['date'],"yyyy-MM-dd HH:mm:ss.zzz")
@@ -1275,8 +1276,8 @@ class data(QWidget):
                 vLoc = ecef_to_enu3DVector(x[1]+ox,x[3]+oy,x[5]+oz,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
                 #le vecteur state doit être en ENU
       
-                _state.state = np.array([xLoc[0],vLoc[0] ,xLoc[1],vLoc[1]  ,xLoc[2],vLoc[2] ])
-                _state.mode = StateType.XYZ
+                _state.xEst = np.array([xLoc[0],vLoc[0] ,xLoc[1],vLoc[1]  ,xLoc[2],vLoc[2] ])
+                #_state.mode = StateType.XYZ
                 _str =  str(row['estimated_covariance']) 
                 _str2 = _str.split('},');
                 P = np.zeros([6,6])
@@ -1288,7 +1289,7 @@ class data(QWidget):
                     x= x.astype(np.float)
                     P[i,:] = x
                 
-                _state.covariance = ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
+                _state.PEst = ecef_to_enuMatrix(P,REFERENCE_POINT.latitude,REFERENCE_POINT.longitude,REFERENCE_POINT.altitude)
                 _state.updateLocation() 
                 _state.updateCovariance()
                 
@@ -1318,20 +1319,20 @@ class data(QWidget):
        
 
                 if pere == None and (_state.idPere==-1 or flag):
-                    _track.tree.data = _state
+                    _track.tree= Tree(data=_state)  
                     flag = False
 #                    if _track.id == 1:
-#                        print('---> 1')
+                    #print('---> 1')
                 elif pere == None and _state.idPere!=-1:
                         pere = _track.getCurrentState()
-                        _track.addState(_state,pere)
+                        pere.addChild(Tree(_state))
 #                        if _track.id == 1:
-#                            print('---> 2')
+                        #print('---> 2')
                 else:
-                 
-                    _track.addState(_state,pere)
+                    pere.addChild(Tree(_state))
+                    #_track.addState(_state,pere)
 #                    if _track.id == 1:
-#                              print('---> 3') 
+                    #print('---> 3') 
 #                if _track.id == 1:
 #                         print(_state.idPere)
         self.conn.row_factory = False;
@@ -1340,9 +1341,9 @@ class data(QWidget):
         #==================
         # nettoyage des tracks 
         #==================
-
-        for _track in tracks :
-            _track.cutChilds()
+        
+        #for _track in tracks :
+        #   _track.cutChilds()
         
         return tracks
     def newTargets(self,gis=None):       
@@ -1494,20 +1495,25 @@ class data(QWidget):
               _plot = Plot()
               _plot.rho            = float(row['locComposant_1'])
               _plot.theta          = float(row['locComposant_2'])
-              _plot.phi            = float(row['locComposant_3'])
+              if row['locComposant_3']!="":
+                  _plot.phi            = float(row['locComposant_3'])
               _plot.sigma_rho      = float(row['locSTDType_1'])
               _plot.sigma_theta    = float(row['locSTDType_2'])
-              _plot.sigma_phi      = float(row['locSTDType_2'])
+              if row['locSTDType_3']!="":
+                  _plot.sigma_phi      = float(row['locSTDType_3'])
               _plot.idScan         = int(row['id_Scan'])
               _plot.idSensor       = row['id_sensor']
               _plot.dateTime       = QDateTime.fromString(row['date'],"yyyy-MM-dd HH:mm:ss.zzz")
-              _plot.doppler        = float(row['velocityComposant_1'])
-              _plot.sigma_doppler  = float(row['velocitySTDType_1'])
+              if row['velocityComposant_1']!="":
+                  _plot.doppler        = float(row['velocityComposant_1'])
+   
+              if row['velocitySTDType_1']!=None:
+                  _plot.sigma_doppler  = float(row['velocitySTDType_1'])
               _plot.id             = int(row['id_Plot'])
               _plot.type           = PLOTType.NOTYPE
-              if row['locationFormat']=='polar':
+              if row['locationFormat']=='POLAR':
                     _plot.type           = PLOTType.POLAR
-              if row['locationFormat']=='spherical':
+              if row['locationFormat']=='SPHERICAL':
                     _plot.type           = PLOTType.SPHERICAL
               _plot.Classification = "UNKNOWN"
               _plot.ProbaClassification = 1.0
