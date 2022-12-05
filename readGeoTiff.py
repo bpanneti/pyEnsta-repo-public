@@ -12,7 +12,7 @@ import matplotlib.image as img
 import matplotlib.mlab as ml
 from osgeo import osr, gdal,ogr
 from enum import Enum
-import cv2
+#import cv2
 import numpy as np
 
 class TYPE_CARTO(Enum):
