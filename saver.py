@@ -42,12 +42,23 @@ sqlite3.register_converter("array", convert_array)
 
 class saveData(QWidget):
      message         = pyqtSignal('QString')
+ 
      def __init__(self, parent=None):
         super(saveData, self).__init__()
         self.conn   = None
         self.connp  = None
- 
+        self.initUI()
+     def initUI(self):
+        p = QLabel("data base: ");
+      
         
+        self.textEdit = QLabel(" "); 
+        layout = QHBoxLayout()
+        layout.addWidget(p)
+        layout.addWidget( self.textEdit )
+        
+        self.setLayout(layout)
+        self.show        
      def saveData(self,_filename = None):
          
          if _filename==None:
@@ -60,7 +71,7 @@ class saveData(QWidget):
              return
             
          self.createTables()
- 
+         self.textEdit.setText(_filename) 
      @staticmethod
      def executeRequest(conn, create_table_sql):
          """ create a table from the create_table_sql statement

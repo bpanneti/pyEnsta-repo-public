@@ -9,12 +9,14 @@ from target import TARGET_TYPE
 from itertools import count
 from copy import deepcopy as deepCopy 
 from sensor import Sensor
+from toolTracking.utils import h
 
 from toolTracking.cmkf import cmkf
 from toolTracking.ekf import ekf
 from toolTracking.imm import imm
 from toolTracking.gnnsf import gnnsf
 from toolTracking.sda import sda
+from toolTracking.fusion_gnnsf import fusion_gnnsf
 #==========================================================
 # type de rtacker
 #==========================================================
@@ -109,7 +111,7 @@ class State(object):
                 self.PEst[0,2]          = 2* plot.R_XY[0, 1]
                 self.PEst[2,2]          = 2* plot.R_XY[1, 1]
                 self.xPred              = self.xEst
-                self.pPred              = self.PEst
+                self.PPred              = self.PEst
                 self.likelihood         = self.PD
                 if parameters['algorithm']  == trackerType.IMM.name:
                    self.xModel                      = np.zeros((4,len(parameters['models'])))
@@ -239,13 +241,14 @@ class State(object):
              gnnsf.predictor(self,time , self.parameters, flagChange)           
         elif  self.parameters['algorithm'] == trackerType.SDA.name : 
              sda.predictor(self,time , self.parameters, flagChange)              
-
+        elif  self.parameters['algorithm'] == trackerType.FUSION_GNNSF.name : 
+             fusion_gnnsf.predictor(self,time , self.parameters, flagChange)   
         self.likelihood = 1 - self.PD
         
-    def gating(self, plot=Plot(), threshold=0): #NSTA : modification
+    def gating(self, plot=Plot(), threshold=0,posCapteur=None,orientationCapteur=None): #NSTA : modification
         self.prediction(plot.dateTime, False)
         x = self.xPred
-        P = self.pPred
+        P = self.PPred
         cost = CostPlot()
         cost.plot = plot
         lambda_c = np.inf
@@ -261,12 +264,27 @@ class State(object):
 
             lambda_c = innovation.T@np.linalg.inv(S)@innovation
         elif plot.type == PLOTType.ANGULAR and self.parameters['dimension'] == StateType.XY:
-            #ENTA TO DO
-            #EKF idem 
-            
+            z                  = np.zeros([1, 1])
+            H                  = np.zeros([1,4])
+    
+            z[0] = np.mod(np.pi/2 - orientationCapteur.yaw * np.pi/180  -  plot.theta * np.pi/180 + np.pi, 2*np.pi) - np.pi
+
+            innovation = z - h(x[0] - posCapteur.x_ENU, x[2] - posCapteur.y_ENU)[1]
+
+            R = np.diag([(plot.sigma_theta * np.pi/180)**2])
+            H = np.zeros([1, 4])   
+            distance2 = np.power(x[0] - posCapteur.x_ENU, 2.0) + np.power(x[2] - posCapteur.y_ENU, 2.0)
+
+
+            H[0,0] = -(x[2] - posCapteur.y_ENU) / distance2
+            H[0,2] =  (x[0] - posCapteur.x_ENU) / distance2
+            S  =  R + np.dot(H, np.dot(P, H.T))
             lambda_c = innovation.T@np.linalg.inv(S)@innovation
-            pass
-            
+             
+        # print('validate')
+        # print(lambda_c)
+        # print(threshold)
+        # print(self.idTrack)
         if lambda_c <= threshold:
             cost.cost     = lambda_c
             cost.state    = self
@@ -330,29 +348,26 @@ class State(object):
         if len(velocity) == 2 and self.parameters['dimension'] == StateType.XY:
             self.xEst[1] = velocity[0]
             self.xEst[3] = velocity[1]
-            '''
-            if self.parameters['algorithm'] == trackerType.IMM.name:
-                for ind,model in enumerate(self.filter): 
-                       self.stateModel[1,[ind]]                = velocity[0] 
-                       self.stateModel[3,[ind]]                = velocity[1] 
-           '''
-            
-                   
+            if self.parameters['algorithm']  == trackerType.IMM.name:
+              for ind,model in enumerate(self.parameters['models']): 
+                  self.xModel[1,[ind]]                    = velocity[0]  
+                  self.xModel[3,[ind]]                    = velocity[1]    
         if len(velocity) == 3 and  self.parameters['dimension']  == StateType.XYZ:
             self.xEst[1] = velocity[0]
             self.xEst[3] = velocity[1]
             self.xEst[5] = velocity[2]
-            '''
-            if self.parameters['algorithm'] == trackerType.IMM.name:
-                for ind,model in enumerate(self.filter): 
-                       self.stateModel[1,[ind]]                = velocity[0] 
-                       self.stateModel[3,[ind]]                = velocity[1]
-                       self.stateModel[5,[ind]]                = velocity[2]
-            '''
+            if self.parameters['algorithm']  == trackerType.IMM.name:
+              for ind,model in enumerate(self.parameters['models']): 
+                  self.xModel[1,[ind]]                    = velocity[0]  
+                  self.xModel[3,[ind]]                    = velocity[1] 
+                  self.xModel[5,[ind]]                    = velocity[2] 
+                  
     def estimation(self, plots = [],posCapteur=Position(), orientationCapteur=Orientation()):
         self.timeWithoutPlot    = 0
         self.isEstimated        = True
         self.likelihood         = 1 - self.PD
+        
+        #print('in estimation :',self.idTrack)
         if not isinstance(posCapteur, Position):
             print("\n[Error] posCapteur should be a Position instance.\n")
             return
@@ -363,12 +378,7 @@ class State(object):
             print("\n[Error] estimation no type provided.\n")
             return
 
-        if plots[0].type == PLOTType.ANGULAR and self.parameters['dimension']== StateType.XY:
-               #==============================
-               # UKF
-               #==============================
-            print('-----> ukf')
-            return
+
         
       
         elif  self.parameters['algorithm'] == trackerType.EKF.name and plots[0].type == PLOTType.POLAR and self.parameters['dimension'] == StateType.XY:
@@ -376,11 +386,14 @@ class State(object):
         elif self.parameters['algorithm'] ==  trackerType.CMKF.name  and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL) and self.parameters['dimension']== StateType.XY:
             cmkf.estimator(plots[0], self, posCapteur, orientationCapteur)
         elif  self.parameters['algorithm'] == trackerType.IMM.name : 
-              imm.estimator(plots[0], self, posCapteur, orientationCapteur,parameters=self.parameters)
+            imm.estimator(plots[0], self, posCapteur, orientationCapteur,parameters=self.parameters)
         elif self.parameters['algorithm'] ==  trackerType.GNNSF.name  and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL) and self.parameters['dimension']== StateType.XY:
             gnnsf.estimator(plots[0], self, posCapteur, orientationCapteur)
         elif self.parameters['algorithm'] ==  trackerType.SDA.name  and (plots[0].type == PLOTType.POLAR or plots[0].type == PLOTType.SPHERICAL) and self.parameters['dimension']== StateType.XY:
-                sda.estimator(plots[0], self, posCapteur, orientationCapteur)
+            sda.estimator(plots[0], self, posCapteur, orientationCapteur)
+        elif self.parameters['algorithm'] ==  trackerType.FUSION_GNNSF.name  and self.parameters['dimension']== StateType.XY:
+            fusion_gnnsf.estimator(plots[0], self, posCapteur, orientationCapteur)
+            fusion_gnnsf.classification(plots[0],self)
         else:
             print("\nThis type of estimation isn't available.\n")
         self.likelihood = self.PD * self.likelihood/self.lambdaFA 

@@ -1389,7 +1389,8 @@ class Sensor(QWidget):
             for _type in TARGET_TYPE:
                    if _type.value.value == p: 
                       classif = _type
-            
+   
+        
         if self.mode == SensorMode.radar or self.mode == SensorMode.radar3D :
             c = np.random.uniform(0,1,size=(len(TARGET_TYPE),1))
         
@@ -1431,7 +1432,7 @@ class Sensor(QWidget):
 
        
         
-    
+        #print(_string, probaClass)
 
         return _string, probaClass
         

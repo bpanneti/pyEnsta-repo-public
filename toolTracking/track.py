@@ -14,6 +14,8 @@ from toolTracking.tree import Tree
 from toolTracking.utils import trackerType, StateType,TrackState
 from toolTracking.state import State 
 
+from target import TARGET_TYPE
+
 from itertools import count
 
 #from toolTracking.randomMatrice import group
@@ -356,7 +358,7 @@ class Track(object):
      
                 #print(self.tree,self.tree.childs)
                 for cState in currentStates:
-                    #print(['usual cycle ------> estate idTrack',cState.idTrack])
+                    #print(['usual cycle ------> estate idTrack',cState.data.idTrack])
                
                     estate = State.copyState(cState.data)
                     cState.addChild(Tree(data=estate))
@@ -371,23 +373,23 @@ class Track(object):
    
 
 
-    def validate(self,_plot,threshold = 14):
+    def validate(self,_plot,threshold = 14,sensorPosition=None,sensorOrientation=None):
         currentStates = []
        
         self.tree.getChilds(currentStates)
 
         for cState in currentStates:
-                [flag, structG] = cState.data.gating(_plot, threshold)
+                [flag, structG] = cState.data.gating(_plot, threshold,sensorPosition,sensorOrientation)
                 if flag:
                     return True
         return False
-    def gating(self,_plot,threshold = 14):
+    def gating(self,_plot,threshold = 14,sensorPosition=None,sensorOrientation=None):
         currentStates = []
        
         self.tree.getChilds(currentStates)
 
         for cState in currentStates:
-                [flag, structG] = cState.data.gating(_plot, threshold)
+                [flag, structG] = cState.data.gating(_plot, threshold,sensorPosition,sensorOrientation)
                 if flag:
 
                     return True,structG
@@ -604,7 +606,8 @@ class Track(object):
                 for _icone in self.iconeObj:
                     _icone.remove()
                 self.iconeObj = []
-    '''
+ 
+    
     def getTrajectory(self):
         
         childs = []
@@ -624,6 +627,7 @@ class Track(object):
                 current = current.parent 
      
         return coords
+
     def getStates(self):
         childs = []
         self.tree.getChilds(childs)
@@ -642,7 +646,7 @@ class Track(object):
                 current = current.parent 
      
         return coords
-    '''    
+  
     def displayTrack(self, axes, canvas,displayTack = True, displayCovariance = True,displayIcone = True):
      
         self.axes = axes
@@ -691,7 +695,13 @@ class Track(object):
             # display image
             # =============================
             if displayIcone:
-                self.iconeObj.append(imscatter(pos.longitude, pos.latitude, 'icones/unknown.png', axes))
+   
+ 
+               
+                icone = c.data.classe.value.icone
+                    
+     
+                self.iconeObj.append(imscatter(pos.longitude, pos.latitude, icone, axes))
             # =============================
             # display covariances
             # =============================
@@ -743,7 +753,7 @@ class Track(object):
             # =============================
             current = c
             while current != None:
-                print((pos.longitude, pos.latitude))   
+            
                 pos = current.data.location
                 latitude.append(pos.latitude)
                 longitude.append(pos.longitude)              
@@ -752,7 +762,7 @@ class Track(object):
             # ,visible=self.trajectoryIsVisible)
             if  displayTack:
                 self.locObj.append(axes.plot(longitude, latitude, '+-', color=self.color.name(), linewidth=2))
-            print(longitude,latitude)
+
             #canvas.update()
             #canvas.flush_events()
             #canvas.draw()

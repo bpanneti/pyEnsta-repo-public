@@ -13,21 +13,39 @@ from orientation import Orientation
 import toolTracking as tr
  
 import numpy as np
-
+from copy import deepcopy as deepCopy 
 class ekf(Estimator):
     __metaclass__ = Estimator
-
+    _parameters = {}
+    _parameters              = {}
+    _parameters['dimension'] = 'XY'# StateType.XY
+    _parameters['algorithm'] = 'EKF'
+    _parameters['models']    = []
+    model                   = {}
+    model['noise']          = 1
+    model['type']           = 'CV' # MotionModel.CV
+    _parameters['models'].append(model)    
     def __init__(self, parent=None):
         super().__init__(parent)
-  
-        self.parameters              = {}
-        self.parameters['dimension'] = StateType.XY
-        self.parameters['algorithm'] = 'EKF'
-        self.parameters['models']    = []
-        model                   = {}
-        model['noise']          = 1
-        model['type']           = MotionModel.CV
-        self.parameters['models'].append(model)
+        self.updateParameters()
+        
+    def updateParameters(self):
+
+         self.parameters = deepCopy(self._parameters)
+         
+         for _dim in StateType:
+             if _dim.name == self.parameters['dimension'] :
+                 
+                 self.parameters['dimension'] = _dim
+         for _mod in range(len(self.parameters['models'])):
+             for _type in MotionModel:
+                 if _type.name == self.parameters['models'][_mod]['type']:
+                     self.parameters['models'][_mod]['type'] = _type
+    def changeParameters(self,_params) :
+   
+         self._parameters = _params
+         
+         self.updateParameters()
     def initializeTrack(self, plot):
         super().initializeTrack(plot)
 
@@ -47,12 +65,12 @@ class ekf(Estimator):
        periode                        =  currState.time.msecsTo(time)/1000
  
        currState.xPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.xEst #np.matrix(np.dot(F(periode, self.state.shape[0]), self.state))
-       currState.pPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.PEst@ F(periode, currState.xEst.shape[0],parameters['models'][0]['type']).T + Q(periode,currState.xEst.shape[0],parameters['models'][0]['type'],parameters['models'][0]['noise'])
+       currState.PPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.PEst@ F(periode, currState.xEst.shape[0],parameters['models'][0]['type']).T + Q(periode,currState.xEst.shape[0],parameters['models'][0]['type'],parameters['models'][0]['noise'])
        currState.timeWithoutPlot     += periode
 
        if flagChange:
             currState.state = currState.xPred
-            currState.covariance = currState.pPred
+            currState.covariance = currState.PPred
 
             currState.time = time
 
@@ -77,12 +95,12 @@ class ekf(Estimator):
         H[1,0] = -(currState.xPred[2] - posCapteur.y_ENU) / distance2
         H[1,2] =  (currState.xPred[0] - posCapteur.x_ENU) / distance2
         
-        S  =  R + np.dot(H, np.dot(currState.pPred, H.T)) 
-        K  = np.dot(currState.pPred, np.dot(H.T, np.linalg.inv(S)))
+        S  =  R + np.dot(H, np.dot(currState.PPred, H.T)) 
+        K  = np.dot(currState.PPred, np.dot(H.T, np.linalg.inv(S)))
         
         currState.xEst = currState.xPred + K@In 
 
-        currState.pEst = np.dot(np.dot(np.identity(currState.xPred.shape[0]) - np.dot(K,H),currState.pPred), (np.identity(currState.xPred.shape[0]) - np.dot(K,H)).T) + np.dot(K,np.dot(R, K.T))
+        currState.PEst = np.dot(np.dot(np.identity(currState.xPred.shape[0]) - np.dot(K,H),currState.PPred), (np.identity(currState.xPred.shape[0]) - np.dot(K,H)).T) + np.dot(K,np.dot(R, K.T))
 
         currState.location.setXYZ(float(currState.xEst[0]), float(currState.xEst[2]),0.0, 'ENU')
         currState.updateCovariance()

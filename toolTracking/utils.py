@@ -8,6 +8,7 @@ class trackerType(Enum):
     IMM             = 3
     GNNSF           = 4
     SDA             = 5 
+    FUSION_GNNSF    = 6
     
 class StateType(Enum):
     UNKNOWN = 0

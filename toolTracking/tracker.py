@@ -36,6 +36,9 @@ from toolTracking.ekf  import ekf
 from toolTracking.imm  import imm
 from toolTracking.gnnsf  import gnnsf
 from toolTracking.sda  import sda
+from toolTracking.fusion_gnnsf  import fusion_gnnsf
+
+import json
 
 TYPE  = namedtuple('trackerType', ['id', 'name','function'])
 class TRACKER_TYPE(Enum):
@@ -45,6 +48,7 @@ class TRACKER_TYPE(Enum):
     IMM         = TYPE(3,'IMM',imm)
     GNNSF       = TYPE(4,'GNNSF',gnnsf)
     SDA         = TYPE(5,'SDA',sda)
+    FUSION_GNNSF= TYPE(6,'FUSION_GNNSF',fusion_gnnsf)
  
   
 def has_method(o, name):
@@ -213,8 +217,8 @@ class Tracker(QObject):
 
 
 
-
-
+        pusshbuttonParameters =  QPushButton("change filter parameters")
+        pusshbuttonParameters.clicked.connect(self.editParameters)
 
 
 
@@ -234,12 +238,15 @@ class Tracker(QObject):
         grid.addWidget(self.ComboBoxCapteurs, 3, 1)
         grid.addWidget(selectedTargets, 4, 0)
         grid.addWidget(self.ComboBoxTargets, 4, 1)
-        grid.addWidget(filtrageParticulaire, 5, 0, 1, 2, Qt.AlignHCenter)
-        grid.addWidget(numberSamples,6,0)
-        grid.addWidget(self.numberSamplesEdit,6,1)
-        grid.addWidget(threshold,7,0)
-        grid.addWidget(self.thresholdEdit,7,1)
+        #grid.addWidget(filtrageParticulaire, 5, 0, 1, 2, Qt.AlignHCenter)
+        grid.addWidget(pusshbuttonParameters,6,0)
+  
+        # grid.addWidget(threshold,7,0)
+        # grid.addWidget(self.thresholdEdit,7,1)
         
+        
+        
+        pusshbuttonParameters
         
         grid.addWidget(QLabel('display covariance'), 8, 0)
         grid.addWidget(self.checkBox_cov, 8, 1)
@@ -271,9 +278,28 @@ class Tracker(QObject):
 
         return self.d.exec_()
 
+    def editParameters(self):
+        
+        if self.tracker==None : 
+            return
+  
+ 
+
+        d = simpleEdidor(self.tracker._parameters)
+       
+        if d.exec_() == 1 :
+        #   print(d.text())
+            try:
+                _params = d.text()
+                _params = _params.replace('\'','"')
+                self.tracker.changeParameters(json.loads(_params))
+            except ValueError:
+                print("Oops!  parameters error.  Try again...")
     def onParticleFilter(self):
         self.filter = TRACKER_TYPE[self.trakerFilterEdit.currentText()]
 
+        if self.tracker==None or self.filter.value.name != self.tracker.parameters['algorithm']:
+            self.tracker =  self.filter.value.function()
         # if TRACKER_TYPE.SIR == self.filter:
         #     self.numberSamplesEdit.setReadOnly(False)  
         #     self.thresholdEdit.setReadOnly(False) 
@@ -357,7 +383,8 @@ class Tracker(QObject):
         #     for _sensor in self.sensors:            
         #             self.trackerInfos = _sensor
        
-        self.tracker =  self.filter.value.function()
+        if self.tracker==None or self.filter.value.name != self.tracker.parameters['algorithm']:
+            self.tracker =  self.filter.value.function()
 
      
         # self.tracker.moveToThread(self.thread)
@@ -508,7 +535,46 @@ class Tracker(QObject):
         self.message.emit(_message)
  
          
+class simpleEdidor(QDialog):
+    
+    def __init__(self,_txt=''):
+        QDialog.__init__(self)
+        self.initUI()
+        self.setText(_txt)
 
+    def setText(self,txt):
+ 
+        self.txt.setText(str(txt))
+    def text(self):
+        
+        return self.txt.toPlainText()
+    def onCancel(self):
+        self.reject()
+    def onOk(self):
+          self.accept()      
+    def initUI(self):
+   
+        layout = QVBoxLayout()
+ 
+        self.txt = QTextEdit(self)
+        layout.addWidget(self.txt )
+        
+
+        
+        buttonLayout = QHBoxLayout()
+        but_ok = QPushButton("OK")
+        buttonLayout.addWidget(but_ok)
+        but_ok.clicked.connect(self.onOk)
+
+        but_cancel = QPushButton("Cancel")
+        buttonLayout.addWidget(but_cancel)
+        but_cancel.clicked.connect(self.onCancel)
+        layout.addLayout(buttonLayout)
+        self.setLayout(layout)
+        self.setGeometry(300,300,300,300)
+        self.setWindowTitle("Simple Text Editor")
+        self.setWindowModality(Qt.ApplicationModal)
+ 
          
 class CheckableComboBox(QComboBox):
     def __init__(self):

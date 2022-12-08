@@ -13,31 +13,54 @@ from point import Position
 from orientation import Orientation
 import numpy as np
 import toolTracking as tr
-
+from copy import deepcopy as deepCopy 
 
 class imm(Estimator):
     __metaclass__ = Estimator
-
+    _parameters = {}
+    _parameters              = {}
+    _parameters['dimension'] = 'XY'# StateType.XY
+    _parameters['algorithm'] = 'IMM'
+    _parameters['models']    = []
+    model                   = {}
+    model['noise']          = 0.1
+    model['type']           = 'CV' # MotionModel.CV
+    model['proba']          = 0.8
+    model['Ptransition_vector'] = [0.8,0.2] 
+    _parameters['models'].append(model)    
+    model2                  = {}
+    model2['noise']         = 2
+    model2['type']          = 'CV' # MotionModel.CV
+    model2['proba']         = 0.2
+    model2['Ptransition_vector'] = [0.3,0.7] 
+    _parameters['models'].append(model2)      
     def __init__(self, parent=None):
         super().__init__(parent)
   
-        self.parameters              = {}
-        self.parameters['dimension'] = StateType.XY
-        self.parameters['algorithm'] = 'IMM'
-        self.parameters['models']    = []
-        model                   = {}
-        model['noise']          = 0.1
-        model['type']           = MotionModel.CV
-        model['proba']          = 0.8
-        model['Ptransition_vector'] = np.array([0.8,0.2])
-        model2                  = {}
-        model2['noise']         = 3
-        model2['type']          = MotionModel.CV
-        model2['proba']         = 0.2
-        model2['Ptransition_vector'] = np.array([0.3,0.7])
-        self.parameters['models'].append(model)
-        self.parameters['models'].append(model2)
- 
+        self.updateParameters()
+    
+    def updateParameters(self):
+
+        self.parameters = deepCopy(self._parameters)
+        
+        for _dim in StateType:
+            if _dim.name == self.parameters['dimension'] :
+                
+                self.parameters['dimension'] = _dim
+        for _mod in range(len(self.parameters['models'])):
+            for _type in MotionModel:
+                if 'Ptransition_vector' in self.parameters['models'][_mod]:
+                    
+                    self.parameters['models'][_mod]['Ptransition_vector'] = np.array(self.parameters['models'][_mod]['Ptransition_vector'])
+                    
+                if _type.name == self.parameters['models'][_mod]['type']:
+                    self.parameters['models'][_mod]['type'] = _type
+
+    def changeParameters(self,_params) :
+
+       self._parameters = _params
+       
+       self.updateParameters()
     def initializeTrack(self, plot):
 
         # initialisation d'une nouvelle piste
@@ -90,14 +113,14 @@ class imm(Estimator):
         currState.timeWithoutPlot     += periode
 
         currState.xPred      = np.zeros((currState.xEst.shape[0],1))
-        currState.pPred      = np.zeros((currState.xEst.shape[0],currState.xEst.shape[0]))
+        currState.PPred      = np.zeros((currState.xEst.shape[0],currState.xEst.shape[0]))
         
         for ind,model in enumerate(parameters['models']):
             currState.xPred+= currState.Mu[ind]*currState.xPredModel[:,[ind]]
                  
         for ind,model in enumerate(parameters['models']):         
             y = currState.xPredModel[:, [ind]] - currState.xPred
-            currState.pPred  += currState.Mu[ind]* (np.outer(y, y) + currState.pPredModel[:,:, ind ])
+            currState.PPred  += currState.Mu[ind]* (np.outer(y, y) + currState.pPredModel[:,:, ind ])
                 
         if flagChange:
             
@@ -110,7 +133,7 @@ class imm(Estimator):
 #            print(currState.pPred)
 #            print('================')
             currState.xEst       = currState.xPred
-            currState.pEst       = currState.pPred
+            currState.PEst       = currState.PPred
 
  
             currState.time = time
@@ -161,13 +184,13 @@ class imm(Estimator):
     
         #combinaison
         currState.xEst          = np.zeros((currState.xEst.shape[0],1))
-        currState.pEst          = np.zeros((currState.xEst.shape[0],currState.xEst.shape[0]))
+        currState.PEst          = np.zeros((currState.xEst.shape[0],currState.xEst.shape[0]))
    
         for ind,model in enumerate(parameters['models']):
             currState.xEst += currState.Mu[ind] * currState.xModel[:,[ind]]
         for ind,model in enumerate(parameters['models']):
             y = currState.xModel[:,[ind]] - currState.xEst 
-            currState.pEst += currState.Mu[ind]*(currState.pModel[:,:,ind] + y@y.T)
+            currState.PEst += currState.Mu[ind]*(currState.pModel[:,:,ind] + y@y.T)
 
 #        print(likelihood)
 #        print(currState.state)

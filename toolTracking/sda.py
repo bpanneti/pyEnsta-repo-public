@@ -14,33 +14,62 @@ import toolTracking as tr
 from scipy.optimize import linear_sum_assignment
     
 from scipy.stats.distributions import chi2
-
+from copy import deepcopy as deepCopy 
 
 class sda(Estimator):
     __metaclass__ = Estimator
-
+    _parameters              = {}
+    _parameters['dimension'] = 'XY'
+    _parameters['algorithm'] = 'SDA'
+    _parameters['threshold_gating'] = 0.95
+    _parameters['models']    = []
+    model                   = {}
+    model['noise']          = 0.1
+    model['type']           = 'CV'
+    _parameters['models'].append(model)
+    _parameters['timeWithoutPlot']          = 3.0 #duree de vie tolérée d'une piste sans plot
+    _parameters['S-Dimensional']            = 2   #S-Dimensionnal
+    _parameters['trackLifeConfirmation']    = 4   #durée nécessaire avant que la piste soit confirmée
+    
     def __init__(self, parent=None):
         super().__init__(parent)
- 
-        self.parameters              = {}
-        self.parameters['dimension'] = StateType.XY
-        self.parameters['algorithm'] = 'SDA'
-        self.parameters['threshold_gating'] = 0.95
-        self.parameters['models']    = []
-        model                   = {}
-        model['noise']          = 0.1
-        model['type']           = MotionModel.CV
-        self.parameters['models'].append(model)
-        self.parameters['timeWithoutPlot']          = 3.0 #duree de vie tolérée d'une piste sans plot
-        self.parameters['S-Dimensional']            = 2   #S-Dimensionnal
-        self.parameters['trackLifeConfirmation']    = 4   #durée nécessaire avant que la piste soit confirmée
+        self.parameters = deepCopy(self._parameters)
         
+        for _dim in StateType:
+            if _dim.name == self.parameters['dimension'] :
+                
+                self.parameters['dimension'] = _dim
+        for _mod in range(len(self.parameters['models'])):
+            for _type in MotionModel:
+                if _type.name == self.parameters['models'][_mod]['type']:
+                    self.parameters['models'][_mod]['type'] = _type
+ 
+
         self.debug                          = False 
         self.threshold                      = 14
         self.updateParameters()
-        
+    def changeParameters(self,_params) :
+ 
+       self._parameters = _params
+       
+       self.updateParameters()
+         
     def updateParameters(self):    
-        
+        self.parameters = deepCopy(self._parameters)
+ 
+        for _dim in StateType:
+             if _dim.name == self.parameters['dimension'] :
+                 
+                 self.parameters['dimension'] = _dim
+        for _mod in range(len(self.parameters['models'])):
+             for _type in MotionModel:
+                 if 'Ptransition_vector' in self.parameters['models'][_mod]:
+                     
+                     self.parameters['models'][_mod]['Ptransition_vector'] = np.array(self.parameters['models'][_mod]['Ptransition_vector'])
+                     
+                 if _type.name == self.parameters['models'][_mod]['type']:
+                     self.parameters['models'][_mod]['type'] = _type
+           
         if self.parameters['dimension'] == StateType.XY:
             self.threshold          = chi2.ppf(self.parameters['threshold_gating'], df=2)     # 11.07
     
@@ -285,12 +314,12 @@ class sda(Estimator):
    
         periode                        =  currState.time.msecsTo(time)/1000
         currState.xPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.xEst #np.matrix(np.dot(F(periode, self.state.shape[0]), self.state))
-        currState.pPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.PEst@ F(periode, currState.xEst.shape[0],parameters['models'][0]['type']).T + Q(periode,currState.xEst.shape[0],parameters['models'][0]['type'],parameters['models'][0]['noise'])
+        currState.PPred                =  F(periode, currState.xEst.shape[0],  parameters['models'][0]['type'])@currState.PEst@ F(periode, currState.xEst.shape[0],parameters['models'][0]['type']).T + Q(periode,currState.xEst.shape[0],parameters['models'][0]['type'],parameters['models'][0]['noise'])
         currState.timeWithoutPlot     += periode
 
         if flagChange:
             currState.xEst = currState.xPred
-            currState.PEst = currState.pPred
+            currState.PEst = currState.PPred
 
             currState.time = time
 
@@ -314,11 +343,11 @@ class sda(Estimator):
 
         In = z - np.dot(H,currState.xPred) 
 
-        S  =  R + np.dot(H, np.dot(currState.pPred, H.T))
+        S  =  R + np.dot(H, np.dot(currState.PPred, H.T))
 
-        K  = np.dot(currState.pPred, np.dot(H.T, np.linalg.inv(S)))
+        K  = np.dot(currState.PPred, np.dot(H.T, np.linalg.inv(S)))
         currState.xEst          = np.array(currState.xPred + np.dot(K, In))
-        currState.pEst         = np.array(np.dot(np.dot(np.identity(currState.xPred.shape[0]) - np.dot(K,H), currState.pPred), (np.identity(currState.xPred.shape[0]) - np.dot(K, H)).T) + np.dot(K, np.dot(R, K.T)))
+        currState.PEst          = np.array(np.dot(np.dot(np.identity(currState.xPred.shape[0]) - np.dot(K,H), currState.PPred), (np.identity(currState.xPred.shape[0]) - np.dot(K, H)).T) + np.dot(K, np.dot(R, K.T)))
     
         currState.location.setXYZ(float(currState.xEst[0]),float(currState.xEst[2]), 0.0, 'ENU')
         currState.updateCovariance()
