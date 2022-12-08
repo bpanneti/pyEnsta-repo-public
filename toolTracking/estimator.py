@@ -106,7 +106,10 @@ class Estimator(QObject):
     @abstractmethod
     def estimator(plot, currState, posCapteur, orientationCapteur):
         pass
-
+    @staticmethod
+    @abstractmethod
+    def classification(plot, currState):
+        pass
     @abstractmethod
     def run(self):
         pass

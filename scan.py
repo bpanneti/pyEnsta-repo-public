@@ -181,7 +181,7 @@ class State(object):
                 self.Location[1]       =  self.z_XY[1]   
             
 class Plot(object):
-    def __init__(self,idScan = 0, idSensor='',rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
+    def __init__(self,idScan = 0,idSensor='',rho = 0.0, theta = 0.0,phi = 0.0,  sigma_rho = 0.0, sigma_theta = 0.0, sigma_phi=0.0):
         global nmberPlot        
         nmberPlot +=1        
         self.rho            = rho
@@ -191,6 +191,7 @@ class Plot(object):
         self.sigma_theta    = sigma_theta
         self.sigma_phi      = sigma_phi
         self.idScan         = idScan
+        #self.sensor         = sensor
         self.idSensor       = idSensor
         self.dateTime       = QDateTime()
         self.doppler        = 0

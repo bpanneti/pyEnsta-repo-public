@@ -549,7 +549,11 @@ class target_Mop(QObject):
         for u in range(0,len(self.plots)):
             if self.plots[u]>=1:
                 detection+=1
-        self.detectionProbability +=  detection/(targetDuration*self.nbRun) 
+                
+        if targetDuration == 0:
+            self.detectionProbability =0
+        else:
+                self.detectionProbability +=  detection/(targetDuration*self.nbRun) 
         
         
           

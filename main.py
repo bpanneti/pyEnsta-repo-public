@@ -180,7 +180,8 @@ class mainwindow(QMainWindow):
         
         self.console        = Console()
         
-        Vlayout3 = QVBoxLayout()
+        Vlayout3 = QVBoxLayout()        
+ 
         Vlayout3.addWidget(self.console)    
         tab2 = QWidget()
         tab2.setLayout(Vlayout3)
@@ -221,7 +222,11 @@ class mainwindow(QMainWindow):
         self.saver          = saveData()
         self.saver.moveToThread(self.threadSaver)
         self.saver.message.connect(self.receiveMessage)
-  
+ 
+        Vlayout5 = QVBoxLayout()
+
+        Vlayout5.addWidget(self.saver)
+        Vlayout2.addLayout(Vlayout5)
         #DataManager
         
         self.manager = DataManager.instance()
@@ -278,6 +283,8 @@ class mainwindow(QMainWindow):
         #===============
         #  saveDatabase
         #===============
+        
+        
         fileName = './data/base/tmp.db' 
         self.saver.saveData(fileName)
         
@@ -285,7 +292,7 @@ class mainwindow(QMainWindow):
         self.ART.message.connect(self.receiveMessage)
         self.ART.referencePoint.connect(self.receiveReferencePoint)
         self.ART.referenceTime.connect(self.receiveReferenceTime)
-            
+ 
         
     def closeTab(self,index):
         self.tabs.removeTab(index)
@@ -715,6 +722,15 @@ class mainwindow(QMainWindow):
         actionSave.triggered.connect(self.saveData);
         menuFichier.addAction(actionSave)
         
+        
+        imageSaveChange = QPixmap("icones/change.png")
+        actionSave = QAction(QIcon(imageSaveChange), 'change data base to save', self)
+        actionSave.setToolTip('click to save data  to save!')
+        actionSave.setShortcut('Ctrl+d')
+        icon  = QIcon(imageSaveChange)
+        actionSave.setIcon(icon)
+        actionSave.triggered.connect(self.changeDataBase);
+        menuFichier.addAction(actionSave)
         
         imageClose = QPixmap("icones/exit.png")
         actionQuit = QAction(QIcon(imageClose), 'exit', self)
@@ -1159,6 +1175,9 @@ class mainwindow(QMainWindow):
                 if _node.tracker.editTracker(self.manager.targets(),_sensors) ==1 :
                    _node.tracker.update()
                    _node.tracker.toDisplay(self.axes,self.canvas)
+        
+
+            
     def editSensor(self,id_sensor):
 
         for _node in self.manager.nodes():
@@ -1574,6 +1593,13 @@ class mainwindow(QMainWindow):
              self.currentSelection.append(pos)
              self.drawPolygon('magenta')
     
+    def changeDataBase(self):
+        self.console.write("change data base to save")
+        fileName, _  = QFileDialog.getSaveFileName(self, 'change data base to save', '.','*.db')        
+        if fileName:
+                self.saver.saveData(fileName)
+               
+        
     def saveData(self):
         self.console.write("save data")
         fileName, _  = QFileDialog.getSaveFileName(self, 'save data', '.','*.db')        
