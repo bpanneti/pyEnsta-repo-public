@@ -206,7 +206,8 @@ class selectData(QWidget):
                     if float(row['locComposant_1'])!=0.0:
      
                       _plot = Plot()
-                      _plot.rho            = float(row['locComposant_1'])
+                      if row['locComposant_1']!='':
+                          _plot.rho            = float(row['locComposant_1'])
                       _plot.theta          = float(row['locComposant_2'])
                       _plot.phi            = float(row['locComposant_3'])
                       _plot.sigma_rho      = float(row['locSTDType_1'])
@@ -1493,12 +1494,16 @@ class data(QWidget):
             for row in data :
               #print('yop pause in loader')
               _plot = Plot()
-              _plot.rho            = float(row['locComposant_1'])
-              _plot.theta          = float(row['locComposant_2'])
+              if row['locComposant_1']!="":
+                  _plot.rho            = float(row['locComposant_1'])
+              if row['locComposant_2']!="":
+                  _plot.theta          = float(row['locComposant_2'])
               if row['locComposant_3']!="":
                   _plot.phi            = float(row['locComposant_3'])
-              _plot.sigma_rho      = float(row['locSTDType_1'])
-              _plot.sigma_theta    = float(row['locSTDType_2'])
+              if row['locSTDType_1']!="":
+                  _plot.sigma_rho      = float(row['locSTDType_1'])
+              if row['locSTDType_2']!="":
+                  _plot.sigma_theta    = float(row['locSTDType_2'])
               if row['locSTDType_3']!="":
                   _plot.sigma_phi      = float(row['locSTDType_3'])
               _plot.idScan         = int(row['id_Scan'])
@@ -1518,9 +1523,11 @@ class data(QWidget):
               _plot.Classification = "UNKNOWN"
               _plot.ProbaClassification = 1.0
               _plot.info_1         =  row['dataType_1']
-              _plot.value_info_1   =  float(row['data_1'])
+              if row['data_1']!='':
+                  _plot.value_info_1   =  float(row['data_1'])
               _plot.info_2         =  row['dataType_2']
-              _plot.value_info_2   =  float(row['data_2'])
+              if row['data_2']!='':
+                  _plot.value_info_2   =  float(row['data_2'])
               detections.append(_plot)
             return detections
     def loadData(self,filename,gis=None):
