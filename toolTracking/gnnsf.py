@@ -201,7 +201,7 @@ class gnnsf(Estimator):
                             #gating a déjà été fait
                                 _track = self.tracks[_trackIndice]
                                 _plot  = self.scan.plots[_plotIndice]
-                                flag,gatingPlot = _track.gating(_plot)  # ENSTA  A modifier ici pour la fusion radar optro
+                                #---> TO DO ENSTA gating de la piste
                                 if flag == False:
                                     costMatrix[i, j] =  MAX_VALUE
 #                                    print('error for he same threshold plot is not validated')
